@@ -2,6 +2,7 @@ import React, { useState, useEffect, PropsWithChildren, useCallback, useRef } fr
 import SearchBar from './SearchBar';
 import { SearchHighlighter } from '../../utils/searchHighlighter';
 import { debounce } from 'lodash';
+import { searchEventManager } from '../../utils/searchEventManager';
 import '../../styles/search.css';
 
 /**
@@ -53,6 +54,9 @@ export const SearchView: React.FC<PropsWithChildren<SearchViewProps>> = ({
     term: '',
     caseSensitive: false,
   });
+  
+  // Generate unique instance ID for this SearchView
+  const instanceIdRef = useRef<string>(`search-view-${Math.random().toString(36).substr(2, 9)}`);
 
   // Create debounced highlight function
   const debouncedHighlight = useCallback(
@@ -191,77 +195,35 @@ export const SearchView: React.FC<PropsWithChildren<SearchViewProps>> = ({
     [internalSearchResults, onNavigate]
   );
 
-  // Create stable refs for the handlers to avoid memory leaks
-  const handlersRef = useRef({
-    handleFindCommand: () => {
-      if (isSearchVisible && searchInputRef.current) {
-        searchInputRef.current.focus();
-        searchInputRef.current.select();
-      } else {
-        setIsSearchVisible(true);
-      }
-    },
-    handleFindNext: () => {
-      if (isSearchVisible) {
-        handleNavigate('next');
-      }
-    },
-    handleFindPrevious: () => {
-      if (isSearchVisible) {
-        handleNavigate('prev');
-      }
-    },
-    handleUseSelectionFind: () => {
-      const selection = window.getSelection()?.toString().trim();
-      if (selection) {
-        setInitialSearchTerm(selection);
-      }
-    },
-  });
-
-  // Update the refs with current values
-  useEffect(() => {
-    handlersRef.current.handleFindCommand = () => {
-      if (isSearchVisible && searchInputRef.current) {
-        searchInputRef.current.focus();
-        searchInputRef.current.select();
-      } else {
-        setIsSearchVisible(true);
-      }
-    };
-    handlersRef.current.handleFindNext = () => {
-      if (isSearchVisible) {
-        handleNavigate('next');
-      }
-    };
-    handlersRef.current.handleFindPrevious = () => {
-      if (isSearchVisible) {
-        handleNavigate('prev');
-      }
-    };
-    handlersRef.current.handleUseSelectionFind = () => {
-      const selection = window.getSelection()?.toString().trim();
-      if (selection) {
-        setInitialSearchTerm(selection);
-      }
-    };
-  });
-
+  // Event handlers for search commands
   const handleFindCommand = useCallback(() => {
-    handlersRef.current.handleFindCommand();
-  }, []);
+    if (isSearchVisible && searchInputRef.current) {
+      searchInputRef.current.focus();
+      searchInputRef.current.select();
+    } else {
+      setIsSearchVisible(true);
+    }
+  }, [isSearchVisible]);
 
   const handleFindNext = useCallback(() => {
-    handlersRef.current.handleFindNext();
-  }, []);
+    if (isSearchVisible) {
+      handleNavigate('next');
+    }
+  }, [isSearchVisible, handleNavigate]);
 
   const handleFindPrevious = useCallback(() => {
-    handlersRef.current.handleFindPrevious();
-  }, []);
+    if (isSearchVisible) {
+      handleNavigate('prev');
+    }
+  }, [isSearchVisible, handleNavigate]);
 
   const handleUseSelectionFind = useCallback(() => {
-    handlersRef.current.handleUseSelectionFind();
+    const selection = window.getSelection()?.toString().trim();
+    if (selection) {
+      setInitialSearchTerm(selection);
+    }
   }, []);
+
 
   /**
    * Closes the search interface and cleans up highlights.
@@ -341,21 +303,36 @@ export const SearchView: React.FC<PropsWithChildren<SearchViewProps>> = ({
     };
   }, [isSearchVisible, handleNavigate, handleSearch, handleUseSelectionFind]);
 
-  // Listen for Find menu commands
+  // Register with global search event manager
   useEffect(() => {
-    window.electron.on('find-command', handleFindCommand);
-    window.electron.on('find-next', handleFindNext);
-    window.electron.on('find-previous', handleFindPrevious);
-    window.electron.on('use-selection-find', handleUseSelectionFind);
+    const instanceId = instanceIdRef.current;
+    
+    // Register this instance with the search event manager
+    searchEventManager.register(instanceId, {
+      'find-command': handleFindCommand,
+      'find-next': handleFindNext,
+      'find-previous': handleFindPrevious,
+      'use-selection-find': handleUseSelectionFind,
+    });
 
     return () => {
-      window.electron.off('find-command', handleFindCommand);
-      window.electron.off('find-next', handleFindNext);
-      window.electron.off('find-previous', handleFindPrevious);
-      window.electron.off('use-selection-find', handleUseSelectionFind);
+      // Unregister this instance
+      searchEventManager.unregister(instanceId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array - handlers are stable due to useCallback and useRef
+  }, [handleFindCommand, handleFindNext, handleFindPrevious, handleUseSelectionFind]);
+
+  // Update handlers when they change
+  useEffect(() => {
+    const instanceId = instanceIdRef.current;
+    if (searchEventManager.isActive(instanceId)) {
+      searchEventManager.updateHandlers(instanceId, {
+        'find-command': handleFindCommand,
+        'find-next': handleFindNext,
+        'find-previous': handleFindPrevious,
+        'use-selection-find': handleUseSelectionFind,
+      });
+    }
+  }, [handleFindCommand, handleFindNext, handleFindPrevious, handleUseSelectionFind]);
 
   return (
     <div

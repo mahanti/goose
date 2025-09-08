@@ -429,21 +429,24 @@ export default function GooseMessage({
             toolName={toolConfirmationContent.toolName}
           />
         )}
-      </div>
 
-      {/* TODO(alexhancock): Re-enable link previews once styled well again */}
-      {/* Link preview - contained within max-width */}
-      {urls.length > 0 && (
-        <div className="flex justify-center w-full mt-4">
-          <div className="max-w-[720px] w-full">
-            <div className="flex flex-col gap-2">
-              {urls.map((url, index) => (
-                <LinkPreview key={index} url={url} />
-              ))}
+        {/* Link preview - contained within max-width and forced below message */}
+        {urls.length > 0 && (
+          <div className="w-full clear-both mt-4">
+            <div className="flex justify-center w-full">
+              <div className="max-w-[720px] w-full">
+                <div className="flex flex-col gap-2 w-full">
+                  {urls.map((url, index) => (
+                    <div key={index} className="w-full block">
+                      <LinkPreview url={url} />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* enable or disable prompts here */}
       {/* NOTE from alexhancock on 1/14/2025 - disabling again temporarily due to non-determinism in when the forms show up */}

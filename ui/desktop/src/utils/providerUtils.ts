@@ -190,7 +190,7 @@ export const initializeSystem = async (
       await syncBundledExtensions(refreshedExtensions, options.addExtension);
     }
 
-    // Add enabled extensions to agent in parallel
+    // Add enabled extensions to agent in parallel (non-blocking)
     const enabledExtensions = refreshedExtensions.filter((ext) => ext.enabled);
 
     options?.setIsExtensionsLoading?.(true);
@@ -210,8 +210,10 @@ export const initializeSystem = async (
       }
     });
 
-    await Promise.allSettled(extensionLoadingPromises);
-    options?.setIsExtensionsLoading?.(false);
+    // Load extensions in background without blocking agent initialization
+    Promise.allSettled(extensionLoadingPromises).finally(() => {
+      options?.setIsExtensionsLoading?.(false);
+    });
   } catch (error) {
     console.error('Failed to initialize agent:', error);
     options?.setIsExtensionsLoading?.(false);

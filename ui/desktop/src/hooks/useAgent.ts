@@ -142,8 +142,9 @@ export function useAgent(): UseAgentReturn {
             await handleConfigRecovery();
           }
 
-          agentWaitingMessage('Extensions are loading');
-          await initializeSystem(agentSessionInfo.session_id, provider as string, model as string, {
+          agentWaitingMessage('Loading extensions in background...');
+          // Initialize system without blocking on extensions
+          initializeSystem(agentSessionInfo.session_id, provider as string, model as string, {
             getExtensions,
             addExtension,
             setIsExtensionsLoading: initContext.setIsExtensionsLoading,

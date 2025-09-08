@@ -117,35 +117,51 @@ export default function LinkPreview({ url }: LinkPreviewProps) {
   }
 
   return (
-    <a href={url} target="_blank" rel="noreferrer">
-      <Card className="max-w-[300px] truncate flex items-center bg-link-preview dark:bg-link-preview-dark p-3 transition-colors cursor-pointer">
-        {metadata.favicon && (
-          <img
-            src={metadata.favicon}
-            alt="Site favicon"
-            className="w-4 h-4 mr-2"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        )}
-        <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium truncate">{metadata.title || url}</h4>
+    <div className="w-full block" style={{ display: 'block', width: '100%' }}>
+      <a href={url} target="_blank" rel="noreferrer" className="block w-3/5" style={{ display: 'block', width: '60%' }}>
+        <div
+          data-slot="card"
+          className="block w-full bg-link-preview dark:bg-link-preview-dark p-3 rounded-xl border shadow-sm transition-colors cursor-pointer hover:shadow-md"
+          style={{ 
+            display: 'block !important',
+            width: '100% !important',
+            clear: 'both',
+            marginBottom: '0.5rem'
+          }}
+        >
+          {/* Header with favicon and title */}
+          <div className="flex items-center gap-2 mb-2">
+            {metadata.favicon && (
+              <img
+                src={metadata.favicon}
+                alt="Site favicon"
+                className="w-4 h-4"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
+            <h4 className="text-sm font-medium truncate">{metadata.title || url}</h4>
+          </div>
+          
+          {/* Description */}
           {metadata.description && (
-            <p className="text-xs text-gray-500 truncate">{metadata.description}</p>
+            <p className="text-xs text-gray-500 mb-2 line-clamp-2">{metadata.description}</p>
+          )}
+          
+          {/* Preview image */}
+          {metadata.image && (
+            <img
+              src={metadata.image}
+              alt="Preview"
+              className="w-full h-32 object-cover rounded"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
           )}
         </div>
-        {metadata.image && (
-          <img
-            src={metadata.image}
-            alt="Preview"
-            className="w-16 h-16 object-cover rounded ml-3"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        )}
-      </Card>
-    </a>
+      </a>
+    </div>
   );
 }
