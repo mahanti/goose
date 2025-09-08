@@ -1,0 +1,693 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { IpcRendererEvent } from 'electron';
+import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { openSharedSessionFromDeepLink } from './sessionLinks';
+import { type SharedSessionDetails } from './sharedSessions';
+import { ErrorUI } from './components/ErrorBoundary';
+import { ExtensionInstallModal } from './components/ExtensionInstallModal';
+import { Toaster } from 'sonner';
+import { GoosehintsModal } from './components/GoosehintsModal';
+import AnnouncementModal from './components/AnnouncementModal';
+import { generateSessionId } from './sessions';
+import ProviderGuard from './components/ProviderGuard';
+
+import { ChatType } from './types/chat';
+import Pair, { PairRouteState } from './components/pair';
+import SettingsView, { SettingsViewOptions } from './components/settings/SettingsView';
+import SessionsView from './components/sessions/SessionsView';
+import SharedSessionView from './components/sessions/SharedSessionView';
+import SchedulesView from './components/schedule/SchedulesView';
+import ProviderSettings from './components/settings/providers/ProviderSettingsPage';
+import { AppLayout } from './components/Layout/AppLayout';
+import { ChatProvider } from './contexts/ChatContext';
+import { DraftProvider } from './contexts/DraftContext';
+
+import { useConfig } from './components/ConfigContext';
+import { ModelAndProviderProvider } from './components/ModelAndProviderContext';
+import PermissionSettingsView from './components/settings/permission/PermissionSetting';
+
+import ExtensionsView, { ExtensionsViewOptions } from './components/extensions/ExtensionsView';
+import ExtensionChatView from './components/extensions/ExtensionChatView';
+import { Recipe } from './recipe';
+import RecipesView from './components/recipes/RecipesView';
+import RecipeEditor from './components/recipes/RecipeEditor';
+import { createNavigationHandler, View, ViewOptions } from './utils/navigationUtils';
+import {
+  AgentState,
+  InitializationContext,
+  NoProviderOrModelError,
+  useAgent,
+} from './hooks/useAgent';
+
+// Route Components
+
+const PairRouteWrapper = ({
+  chat,
+  setChat,
+  setIsGoosehintsModalOpen,
+  setAgentWaitingMessage,
+  setFatalError,
+  agentState,
+  loadCurrentChat,
+}: {
+  chat: ChatType;
+  setChat: (chat: ChatType) => void;
+  setIsGoosehintsModalOpen: (isOpen: boolean) => void;
+  setAgentWaitingMessage: (msg: string | null) => void;
+  setFatalError: (value: ((prevState: string | null) => string | null) | string | null) => void;
+  agentState: AgentState;
+  loadCurrentChat: (context: InitializationContext) => Promise<ChatType>;
+}) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const setView = useMemo(() => createNavigationHandler(navigate), [navigate]);
+  const routeState =
+    (location.state as PairRouteState) || (window.history.state as PairRouteState) || {};
+  const [resumeSessionId, setResumeSessionId] = useState(routeState.resumeSessionId);
+  const [initialMessage, setInitialMessage] = useState(routeState.initialMessage);
+
+  // Update state when location state changes (e.g., when selecting different sessions)
+  useEffect(() => {
+    const newRouteState =
+      (location.state as PairRouteState) || (window.history.state as PairRouteState) || {};
+    setResumeSessionId(newRouteState.resumeSessionId);
+    setInitialMessage(newRouteState.initialMessage);
+    
+    // Handle resetChat request - only once per navigation
+    if (newRouteState.resetChat && newRouteState.resetChat === true) {
+      // Generate a new session and clear everything
+      const newSessionId = generateSessionId();
+      setChat({
+        sessionId: newSessionId,
+        title: 'New Chat',
+        messages: [],
+        messageHistoryIndex: 0,
+        recipeConfig: null,
+      });
+    }
+  }, [location.state, setChat]);
+
+  return (
+    <Pair
+      chat={chat}
+      setChat={setChat}
+      setView={setView}
+      agentState={agentState}
+      loadCurrentChat={loadCurrentChat}
+      setFatalError={setFatalError}
+      setAgentWaitingMessage={setAgentWaitingMessage}
+      setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
+      resumeSessionId={resumeSessionId}
+      initialMessage={initialMessage}
+    />
+  );
+};
+
+const SettingsRoute = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const setView = useMemo(() => createNavigationHandler(navigate), [navigate]);
+
+  // Get viewOptions from location.state or history.state
+  const viewOptions =
+    (location.state as SettingsViewOptions) || (window.history.state as SettingsViewOptions) || {};
+  return <SettingsView onClose={() => navigate('/')} setView={setView} viewOptions={viewOptions} />;
+};
+
+const SessionsRoute = () => {
+  const navigate = useNavigate();
+  const setView = useMemo(() => createNavigationHandler(navigate), [navigate]);
+
+  return <SessionsView setView={setView} />;
+};
+
+const SchedulesRoute = () => {
+  const navigate = useNavigate();
+  return <SchedulesView onClose={() => navigate('/')} />;
+};
+
+const RecipesRoute = () => {
+  return <RecipesView />;
+};
+
+const RecipeEditorRoute = () => {
+  const location = useLocation();
+
+  // Check for config from multiple sources:
+  // 1. Location state (from navigation)
+  // 2. localStorage (from "View Recipe" button)
+  // 3. Window electron config (from deeplinks)
+  let config = location.state?.config;
+
+  if (!config) {
+    const storedConfig = localStorage.getItem('viewRecipeConfig');
+    if (storedConfig) {
+      try {
+        config = JSON.parse(storedConfig);
+        // Clear the stored config after using it
+        localStorage.removeItem('viewRecipeConfig');
+      } catch (error) {
+        console.error('Failed to parse stored recipe config:', error);
+      }
+    }
+  }
+
+  if (!config) {
+    const electronConfig = window.electron.getConfig();
+    config = electronConfig.recipe;
+  }
+
+  return <RecipeEditor config={config} />;
+};
+
+const PermissionRoute = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const parentView = location.state?.parentView as View;
+  const parentViewOptions = location.state?.parentViewOptions as ViewOptions;
+
+  return (
+    <PermissionSettingsView
+      onClose={() => {
+        // Navigate back to parent view with options
+        switch (parentView) {
+          case 'chat':
+            navigate('/');
+            break;
+          case 'pair':
+            navigate('/pair');
+            break;
+          case 'settings':
+            navigate('/settings', { state: parentViewOptions });
+            break;
+          case 'sessions':
+            navigate('/sessions');
+            break;
+          case 'schedules':
+            navigate('/schedules');
+            break;
+          case 'recipes':
+            navigate('/recipes');
+            break;
+          default:
+            navigate('/');
+        }
+      }}
+    />
+  );
+};
+
+const ConfigureProvidersRoute = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="w-screen h-screen bg-background-default">
+      <ProviderSettings
+        onClose={() => navigate('/settings', { state: { section: 'models' } })}
+        isOnboarding={false}
+      />
+    </div>
+  );
+};
+
+interface WelcomeRouteProps {
+  onSelectProvider: () => void;
+}
+
+const WelcomeRoute = ({ onSelectProvider }: WelcomeRouteProps) => {
+  const navigate = useNavigate();
+  const onClose = useCallback(() => {
+    onSelectProvider();
+    navigate('/');
+  }, [navigate, onSelectProvider]);
+
+  return (
+    <div className="w-screen h-screen bg-background-default">
+      <ProviderSettings onClose={onClose} isOnboarding={true} />
+    </div>
+  );
+};
+
+// Wrapper component for SharedSessionRoute to access parent state
+const SharedSessionRouteWrapper = ({
+  isLoadingSharedSession,
+  setIsLoadingSharedSession,
+  sharedSessionError,
+}: {
+  isLoadingSharedSession: boolean;
+  setIsLoadingSharedSession: (loading: boolean) => void;
+  sharedSessionError: string | null;
+}) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const setView = createNavigationHandler(navigate);
+
+  const historyState = window.history.state;
+  const sessionDetails = (location.state?.sessionDetails ||
+    historyState?.sessionDetails) as SharedSessionDetails | null;
+  const error = location.state?.error || historyState?.error || sharedSessionError;
+  const shareToken = location.state?.shareToken || historyState?.shareToken;
+  const baseUrl = location.state?.baseUrl || historyState?.baseUrl;
+
+  return (
+    <SharedSessionView
+      session={sessionDetails}
+      isLoading={isLoadingSharedSession}
+      error={error}
+      onRetry={async () => {
+        if (shareToken && baseUrl) {
+          setIsLoadingSharedSession(true);
+          try {
+            await openSharedSessionFromDeepLink(`goose://sessions/${shareToken}`, setView, baseUrl);
+          } catch (error) {
+            console.error('Failed to retry loading shared session:', error);
+          } finally {
+            setIsLoadingSharedSession(false);
+          }
+        }
+      }}
+    />
+  );
+};
+
+const ExtensionsRoute = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get viewOptions from location.state or history.state (for deep link extensions)
+  const viewOptions =
+    (location.state as ExtensionsViewOptions) ||
+    (window.history.state as ExtensionsViewOptions) ||
+    {};
+
+  return (
+    <ExtensionsView
+      onClose={() => navigate(-1)}
+      setView={(view, options) => {
+        switch (view) {
+          case 'chat':
+            navigate('/');
+            break;
+          case 'pair':
+            navigate('/pair', { state: options });
+            break;
+          case 'settings':
+            navigate('/settings', { state: options });
+            break;
+          default:
+            navigate('/');
+        }
+      }}
+      viewOptions={viewOptions}
+    />
+  );
+};
+
+const ExtensionChatRoute = () => {
+  const navigate = useNavigate();
+  const setView = useMemo(() => createNavigationHandler(navigate), [navigate]);
+
+  return (
+    <ExtensionChatView
+      onClose={() => navigate('/')}
+      setView={setView}
+    />
+  );
+};
+
+export default function App() {
+  const [fatalError, setFatalError] = useState<string | null>(null);
+  const [isGoosehintsModalOpen, setIsGoosehintsModalOpen] = useState(false);
+  const [agentWaitingMessage, setAgentWaitingMessage] = useState<string | null>(null);
+  const [isLoadingSharedSession, setIsLoadingSharedSession] = useState(false);
+  const [sharedSessionError, setSharedSessionError] = useState<string | null>(null);
+
+  const [didSyncUrlParams, setDidSyncUrlParams] = useState<boolean>(false);
+
+  const [viewType, setViewType] = useState<string | null>(null);
+  const [resumeSessionId, setResumeSessionId] = useState<string | null>(null);
+
+  const [didSelectProvider, setDidSelectProvider] = useState<boolean>(false);
+
+  const [recipeFromAppConfig] = useState<Recipe | null>(
+    (window.appConfig?.get('recipe') as Recipe) || null
+  );
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const viewType = urlParams.get('view') || null;
+    const resumeSessionId = urlParams.get('resumeSessionId') || null;
+
+    setViewType(viewType);
+    setResumeSessionId(resumeSessionId);
+    setDidSyncUrlParams(true);
+  }, []);
+
+  const [chat, _setChat] = useState<ChatType>({
+    sessionId: generateSessionId(),
+    title: 'Pair Chat',
+    messages: [],
+    messageHistoryIndex: 0,
+    recipeConfig: null,
+  });
+
+  const setChat = useCallback<typeof _setChat>(
+    (update) => {
+      _setChat(update);
+    },
+    [_setChat]
+  );
+
+  const { addExtension } = useConfig();
+  const { agentState, loadCurrentChat } = useAgent();
+
+  useEffect(() => {
+    console.log('Sending reactReady signal to Electron');
+    try {
+      window.electron.reactReady();
+    } catch (error) {
+      console.error('Error sending reactReady:', error);
+      setFatalError(
+        `React ready notification failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }, []);
+
+  // Handle URL parameters and deeplinks on app startup
+  useEffect(() => {
+    if (!didSyncUrlParams) {
+      return;
+    }
+
+    const stateData: PairRouteState = {
+      resumeSessionId: resumeSessionId || undefined,
+    };
+    (async () => {
+      try {
+        await loadCurrentChat({
+          setAgentWaitingMessage,
+          recipeConfig: recipeFromAppConfig || undefined,
+          ...stateData,
+        });
+      } catch (e) {
+        if (e instanceof NoProviderOrModelError) {
+          // the onboarding flow will trigger
+        } else {
+          throw e;
+        }
+      }
+    })();
+
+    if (resumeSessionId || recipeFromAppConfig) {
+      window.location.hash = '#/pair';
+      window.history.replaceState(stateData, '', '#/pair');
+      return;
+    }
+
+    if (!viewType) {
+      if (window.location.hash === '' || window.location.hash === '#') {
+        window.location.hash = '#/';
+        window.history.replaceState({}, '', '#/');
+      }
+    } else {
+      if (viewType === 'recipeEditor' && recipeFromAppConfig) {
+        window.location.hash = '#/recipe-editor';
+        window.history.replaceState({ config: recipeFromAppConfig }, '', '#/recipe-editor');
+      } else {
+        const routeMap: Record<string, string> = {
+          chat: '#/',
+          pair: '#/pair',
+          settings: '#/settings',
+          sessions: '#/sessions',
+          schedules: '#/schedules',
+          recipes: '#/recipes',
+          permission: '#/permission',
+          ConfigureProviders: '#/configure-providers',
+          sharedSession: '#/shared-session',
+          recipeEditor: '#/recipe-editor',
+          welcome: '#/welcome',
+        };
+
+        const route = routeMap[viewType];
+        if (route) {
+          window.location.hash = route;
+          window.history.replaceState({}, '', route);
+        }
+      }
+    }
+  }, [
+    recipeFromAppConfig,
+    loadCurrentChat,
+    setAgentWaitingMessage,
+    didSyncUrlParams,
+    resumeSessionId,
+    viewType,
+  ]);
+
+  useEffect(() => {
+    const handleOpenSharedSession = async (_event: IpcRendererEvent, ...args: unknown[]) => {
+      const link = args[0] as string;
+      window.electron.logInfo(`Opening shared session from deep link ${link}`);
+      setIsLoadingSharedSession(true);
+      setSharedSessionError(null);
+      try {
+        await openSharedSessionFromDeepLink(link, (_view: View, _options?: ViewOptions) => {
+          // Navigate to shared session view with the session data
+          window.location.hash = '#/shared-session';
+          if (_options) {
+            window.history.replaceState(_options, '', '#/shared-session');
+          }
+        });
+      } catch (error) {
+        console.error('Unexpected error opening shared session:', error);
+        // Navigate to shared session view with error
+        window.location.hash = '#/shared-session';
+        const shareToken = link.replace('goose://sessions/', '');
+        const options = {
+          sessionDetails: null,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          shareToken,
+        };
+        window.history.replaceState(options, '', '#/shared-session');
+      } finally {
+        setIsLoadingSharedSession(false);
+      }
+    };
+    window.electron.on('open-shared-session', handleOpenSharedSession);
+    return () => {
+      window.electron.off('open-shared-session', handleOpenSharedSession);
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log('Setting up keyboard shortcuts');
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMac = window.electron.platform === 'darwin';
+      if ((isMac ? event.metaKey : event.ctrlKey) && event.key === 'n') {
+        event.preventDefault();
+        try {
+          const workingDir = window.appConfig?.get('GOOSE_WORKING_DIR');
+          console.log(`Creating new chat window with working dir: ${workingDir}`);
+          window.electron.createChatWindow(undefined, workingDir as string);
+        } catch (error) {
+          console.error('Error creating new window:', error);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  // Prevent default drag and drop behavior globally to avoid opening files in new windows
+  // but allow our React components to handle drops in designated areas
+  useEffect(() => {
+    const preventDefaults = (e: globalThis.DragEvent) => {
+      // Only prevent default if we're not over a designated drop zone
+      const target = e.target as HTMLElement;
+      const isOverDropZone = target.closest('[data-drop-zone="true"]') !== null;
+
+      if (!isOverDropZone) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const handleDragOver = (e: globalThis.DragEvent) => {
+      // Always prevent default for dragover to allow dropping
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDrop = (e: globalThis.DragEvent) => {
+      // Only prevent default if we're not over a designated drop zone
+      const target = e.target as HTMLElement;
+      const isOverDropZone = target.closest('[data-drop-zone="true"]') !== null;
+
+      if (!isOverDropZone) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // Add event listeners to document to catch drag events
+    document.addEventListener('dragenter', preventDefaults, false);
+    document.addEventListener('dragleave', preventDefaults, false);
+    document.addEventListener('dragover', handleDragOver, false);
+    document.addEventListener('drop', handleDrop, false);
+
+    return () => {
+      document.removeEventListener('dragenter', preventDefaults, false);
+      document.removeEventListener('dragleave', preventDefaults, false);
+      document.removeEventListener('dragover', handleDragOver, false);
+      document.removeEventListener('drop', handleDrop, false);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleFatalError = (_event: IpcRendererEvent, ...args: unknown[]) => {
+      const errorMessage = args[0] as string;
+      console.error('Encountered a fatal error:', errorMessage);
+      setFatalError(errorMessage);
+    };
+    window.electron.on('fatal-error', handleFatalError);
+    return () => {
+      window.electron.off('fatal-error', handleFatalError);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleSetView = (_event: IpcRendererEvent, ...args: unknown[]) => {
+      const newView = args[0] as View;
+      const section = args[1] as string | undefined;
+      console.log(
+        `Received view change request to: ${newView}${section ? `, section: ${section}` : ''}`
+      );
+
+      if (section && newView === 'settings') {
+        window.location.hash = `#/settings?section=${section}`;
+      } else {
+        window.location.hash = `#/${newView}`;
+      }
+    };
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewFromUrl = urlParams.get('view');
+    if (viewFromUrl) {
+      const windowConfig = window.electron.getConfig();
+      if (viewFromUrl === 'recipeEditor') {
+        const initialViewOptions = {
+          recipeConfig: JSON.stringify(windowConfig?.recipeConfig),
+          view: viewFromUrl,
+        };
+        window.history.replaceState(
+          {},
+          '',
+          `/recipe-editor?${new URLSearchParams(initialViewOptions).toString()}`
+        );
+      } else {
+        window.history.replaceState({}, '', `/${viewFromUrl}`);
+      }
+    }
+    window.electron.on('set-view', handleSetView);
+    return () => window.electron.off('set-view', handleSetView);
+  }, []);
+
+  useEffect(() => {
+    const handleFocusInput = (_event: IpcRendererEvent, ..._args: unknown[]) => {
+      const inputField = document.querySelector('input[type="text"], textarea') as HTMLInputElement;
+      if (inputField) {
+        inputField.focus();
+      }
+    };
+    window.electron.on('focus-input', handleFocusInput);
+    return () => {
+      window.electron.off('focus-input', handleFocusInput);
+    };
+  }, []);
+
+  if (fatalError) {
+    return <ErrorUI error={new Error(fatalError)} />;
+  }
+
+  return (
+    <DraftProvider>
+      <ModelAndProviderProvider>
+        <HashRouter>
+          <Toaster 
+            position="top-right"
+            closeButton
+            theme="system"
+          />
+          <ExtensionInstallModal addExtension={addExtension} />
+          <div className="relative w-screen h-screen overflow-hidden bg-background-muted flex flex-col">
+            <div className="titlebar-drag-region" />
+            <Routes>
+              <Route
+                path="welcome"
+                element={<WelcomeRoute onSelectProvider={() => setDidSelectProvider(true)} />}
+              />
+              <Route path="configure-providers" element={<ConfigureProvidersRoute />} />
+              <Route
+                path="/"
+                element={
+                  <ProviderGuard didSelectProvider={didSelectProvider}>
+                    <ChatProvider
+                      chat={chat}
+                      setChat={setChat}
+                      contextKey="hub"
+                      agentWaitingMessage={agentWaitingMessage}
+                    >
+                      <AppLayout setIsGoosehintsModalOpen={setIsGoosehintsModalOpen} />
+                    </ChatProvider>
+                  </ProviderGuard>
+                }
+              >
+                <Route
+                  index
+                  element={
+                    <PairRouteWrapper
+                      chat={chat}
+                      setChat={setChat}
+                      agentState={agentState}
+                      loadCurrentChat={loadCurrentChat}
+                      setFatalError={setFatalError}
+                      setAgentWaitingMessage={setAgentWaitingMessage}
+                      setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
+                    />
+                  }
+                />
+                <Route path="settings" element={<SettingsRoute />} />
+                <Route path="extensions" element={<ExtensionsRoute />} />
+                <Route path="extension-chat" element={<ExtensionChatRoute />} />
+                <Route path="sessions" element={<SessionsRoute />} />
+                <Route path="schedules" element={<SchedulesRoute />} />
+                <Route path="recipes" element={<RecipesRoute />} />
+                <Route path="recipe-editor" element={<RecipeEditorRoute />} />
+                <Route
+                  path="shared-session"
+                  element={
+                    <SharedSessionRouteWrapper
+                      isLoadingSharedSession={isLoadingSharedSession}
+                      setIsLoadingSharedSession={setIsLoadingSharedSession}
+                      sharedSessionError={sharedSessionError}
+                    />
+                  }
+                />
+                <Route path="permission" element={<PermissionRoute />} />
+              </Route>
+            </Routes>
+          </div>
+          {isGoosehintsModalOpen && (
+            <GoosehintsModal
+              directory={window.appConfig?.get('GOOSE_WORKING_DIR') as string}
+              setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
+            />
+          )}
+        </HashRouter>
+        <AnnouncementModal />
+      </ModelAndProviderProvider>
+    </DraftProvider>
+  );
+}

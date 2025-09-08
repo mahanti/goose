@@ -1,0 +1,53 @@
+import { Message, getToolRequests } from '../types/message';
+import { NotificationEvent } from '../hooks/useMessageStream';
+import ToolCallWithResponse from './ToolCallWithResponse';
+
+interface ToolCallChainProps {
+  messages: Message[];
+  chainIndices: number[];
+  toolCallNotifications: Map<string, NotificationEvent[]>;
+  toolResponsesMap: Map<string, import('../types/message').ToolResponseMessageContent>;
+  messageHistoryIndex: number;
+  isStreaming?: boolean;
+}
+
+export default function ToolCallChain({
+  messages,
+  chainIndices,
+  toolCallNotifications,
+  toolResponsesMap,
+  messageHistoryIndex,
+  isStreaming = false,
+}: ToolCallChainProps) {
+
+  return (
+    <div className="relative flex flex-col w-full">
+      <div className="flex justify-center w-full">
+        <div className="max-w-[720px] w-full">
+          <div className="flex flex-col gap-3">
+            {chainIndices.map((messageIndex) => {
+              const message = messages[messageIndex];
+              const toolRequests = getToolRequests(message);
+
+              return toolRequests.map((toolRequest) => (
+                <div key={toolRequest.id} className="goose-message-tool">
+                  <ToolCallWithResponse
+                    isCancelledMessage={
+                      messageIndex < messageHistoryIndex &&
+                      toolResponsesMap.get(toolRequest.id) == undefined
+                    }
+                    toolRequest={toolRequest}
+                    toolResponse={toolResponsesMap.get(toolRequest.id)}
+                    notifications={toolCallNotifications.get(toolRequest.id)}
+                    isStreamingMessage={isStreaming}
+                  />
+                </div>
+              ));
+            })}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}

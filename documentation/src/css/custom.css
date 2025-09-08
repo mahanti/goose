@@ -1,0 +1,413 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+
+@font-face {
+  font-family: Cash Sans;
+  src: url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Regular.woff2)
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: Cash Sans;
+  src: url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Medium.woff2)
+    format("woff2");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: Cash Sans;
+  src: url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Semibold.woff2)
+    format("woff2");
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: Cash Sans;
+  src: url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Bold.woff2)
+    format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+
+:root {
+  --ifm-color-primary: rgba(235, 115, 0, 1);
+  --ifm-color-primary-dark: rgba(211, 103, 0, 1);
+  --ifm-color-primary-darker: rgba(188, 92, 0, 1);
+  --ifm-color-primary-darkest: rgba(141, 69, 0, 1);
+  --ifm-color-primary-light: rgba(255, 126, 0, 1);
+  --ifm-color-primary-lighter: rgba(255, 138, 26, 1);
+  --ifm-color-primary-lightest: rgba(255, 150, 51, 1);
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  /* SwiftUI Color System Integration for Documentation */
+  --mango-orange: rgba(235, 115, 0, 1);
+  --surface-5: rgba(247, 247, 249, 1);
+  --surface-10: rgba(245, 245, 245, 1);
+  --surface-20: rgba(231, 231, 231, 1);
+  --surface-30: rgba(208, 208, 208, 1);
+  --surface-base: rgba(255, 255, 255, 1);
+  
+  --text-30: rgba(0, 0, 0, 0.3);
+  --text-50: rgba(0, 0, 0, 0.5);
+  --text-70: rgba(0, 0, 0, 0.65);
+  --text-base: rgba(0, 0, 0, 0.8);
+  --text-base-static: rgba(0, 0, 0, 0.9);
+  --text-contrast: rgba(255, 255, 255, 1);
+
+  /* Map documentation semantics to SwiftUI colors */
+  --background-app: var(--surface-base);
+  --background-prominent: var(--surface-20);
+  --background-standard: var(--surface-10);
+  --background-subtle: var(--surface-5);
+
+  --border-divider: var(--surface-10);
+  --border-inverse: var(--surface-base);
+  --border-prominent: var(--text-base);
+  --border-standard: var(--surface-30);
+  --border-subtle: var(--surface-10);
+
+  --icon-disabled: var(--text-30);
+  --icon-extra-subtle: var(--text-30);
+  --icon-inverse: var(--text-contrast);
+  --icon-prominent: var(--text-base);
+  --icon-standard: var(--text-base);
+  --icon-subtle: var(--text-50);
+
+  --text-placeholder: var(--text-50);
+  --text-prominent: var(--text-base-static);
+  --text-standard: var(--text-base);
+  --text-subtle: var(--text-50);
+  --text-inverse: var(--text-contrast);
+
+  /* Keep accessible green colors */
+  --green-for-lightbg: #0f6636;
+  --green-for-darkbg: #25c2a0;
+
+  --button-primary-background: var(--text-base-static);
+
+  /* overrides */
+
+  --ifm-button-border-radius: 999px;
+  --ifm-font-family-base: "Cash Sans", sans-serif;
+  --ifm-font-size-base: 16px;
+  --ifm-button-font-weight: var(--ifm-font-weight-normal);
+  --ifm-navbar-item-padding-horizontal: 32px;
+  --ifm-navbar-shadow: none;
+  --ifm-navbar-background-color: var(--background-app);
+  --ifm-background-color: var(--background-app);
+  --ifm-hero-text-color: var(--text-standard);
+  --ifm-heading-font-weight: var(--ifm-font-weight-semibold);
+  --ifm-footer-background-color: var(--background-app);
+  --ifm-color-primary: var(--text-base-static);
+  --ifm-footer-link-color: var(--text-standard);
+  --ifm-navbar-link-hover-color: var(--text-subtle);
+  --ifm-link-color: var(--green-for-lightbg);
+
+  /* video adnomition */
+  --ifm-color-video-alert-contrast-background: #edfbf8;
+  --ifm-color-video-alert-contrast-foreground: #01523e;
+  --ifm-color-video-alert-border: #25c2a0;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme="dark"] {
+  --ifm-color-primary: var(--mango-orange);
+  --ifm-color-primary-dark: rgba(211, 103, 0, 1);
+  --ifm-color-primary-darker: rgba(188, 92, 0, 1);
+  --ifm-color-primary-darkest: rgba(141, 69, 0, 1);
+  --ifm-color-primary-light: rgba(255, 126, 0, 1);
+  --ifm-color-primary-lighter: rgba(255, 138, 26, 1);
+  --ifm-color-primary-lightest: rgba(255, 150, 51, 1);
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+
+  /* SwiftUI Dark Mode Colors */
+  --mango-orange: rgba(235, 115, 0, 1);
+  --surface-5: rgba(38, 38, 38, 1);
+  --surface-10: rgba(34, 34, 34, 1);
+  --surface-20: rgba(51, 51, 51, 1);
+  --surface-30: rgba(51, 51, 51, 1);
+  --surface-base: rgba(17, 17, 17, 1);
+  
+  --text-30: rgba(255, 255, 255, 0.3);
+  --text-50: rgba(255, 255, 255, 0.5);
+  --text-70: rgba(255, 255, 255, 0.7);
+  --text-base: rgba(255, 255, 255, 0.9);
+  --text-base-static: rgba(0, 0, 0, 0.9);
+  --text-contrast: rgba(0, 0, 0, 1);
+
+  /* Map dark mode documentation semantics to SwiftUI colors */
+  --background-app: var(--surface-base);
+  --background-prominent: var(--surface-20);
+  --background-standard: var(--surface-10);
+  --background-subtle: var(--surface-5);
+
+  --border-divider: var(--surface-10);
+  --border-inverse: var(--surface-base);
+  --border-prominent: var(--text-base);
+  --border-standard: var(--surface-30);
+  --border-subtle: var(--surface-10);
+
+  --icon-disabled: var(--text-30);
+  --icon-extra-subtle: var(--text-30);
+  --icon-inverse: var(--text-contrast);
+  --icon-prominent: var(--text-base);
+  --icon-standard: var(--text-base);
+  --icon-subtle: var(--text-50);
+
+  --text-placeholder: var(--text-50);
+  --text-prominent: var(--text-base);
+  --text-standard: var(--text-base);
+  --text-subtle: var(--text-50);
+  --text-inverse: var(--text-contrast);
+
+  --button-primary-background: var(--text-contrast);
+  --ifm-link-color: var(--green-for-darkbg);
+
+  /* video adnomition */
+  --ifm-color-video-alert-contrast-background: #336e62;
+  --ifm-color-video-alert-contrast-foreground: rgb(216 251 216);
+  --ifm-color-video-alert-border: #99d5c5;
+}
+
+/* overrides */
+
+.button {
+  display: flex;
+  align-items: center;
+  padding: 8px 24px;
+  font-weight: var(--ifm-font-weight-semibold);
+  font-size: var(--ifm-font-size-base);
+  color: var(--text-standard);
+  border: none;
+}
+
+.button--primary {
+  background: var(--button-primary-background);
+  color: var(--text-inverse);
+}
+
+.button svg {
+  margin-right: 0.75rem;
+}
+
+.hero--primary {
+  background: var(--background-app);
+  color: var(--text-standard);
+}
+
+html {
+  background-color: var(--background-app);
+}
+
+.hero .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.hero__title {
+  max-width: 280px;
+  text-align: center;
+  line-height: 0.8;
+  margin-bottom: 32px;
+}
+
+.hero__subtitle {
+  max-width: 600px;
+  margin-bottom: 32px;
+  font-size: 28px;
+  line-height: 36px;
+}
+
+.footer {
+  border-top: 2px solid var(--border-subtle);
+  padding-top: 24px;
+}
+
+.hero--logo svg {
+  height: 220px;
+  width: 220px;
+}
+
+.pill-button {
+  display: flex;
+  align-items: center;
+}
+
+.pill-button p {
+  margin: 0;
+}
+
+.ctaButton {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: var(--background-app);
+  color: var(--text-standard);
+  font-weight: bold;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+/* Enable word-wrap for code blocks */
+.theme-code-block pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+html[data-theme="dark"] .hide-in-dark {
+  opacity: 0;
+}
+
+html[data-theme="light"] .hide-in-light {
+  opacity: 0;
+}
+
+.alert--video {
+  --ifm-alert-background-color: var(
+    --ifm-color-video-alert-contrast-background
+  );
+  --ifm-alert-background-color-highlight: rgba(84, 199, 236, 0.15);
+  --ifm-alert-foreground-color: var(
+    --ifm-color-video-alert-contrast-foreground
+  );
+  --ifm-alert-border-color: var(--ifm-color-video-alert-border);
+}
+
+.aspect-ratio{
+  aspect-ratio: 16 / 9;
+  width: 100%;
+}
+
+.navbar {
+  border-bottom: 1px solid var(--border-divider);
+}
+
+/* Smooth transitions for navbar items */
+.navbar__item {
+  display: flex;
+  align-items: center;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.navbar__toggle {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+/*
+ * No margin is needed for the branding right now,
+ * since there is padding on the items and no brand text.
+ * If those things change, you may want to revert this.
+*/
+.navbar__brand {
+  margin-right: 0px;
+}
+
+.navbar__logo {
+  margin-right: 0px;
+}
+
+/* Dropdown styles */
+.navbar__link--active {
+  color: var(--text-prominent);
+}
+
+.dropdown__menu {
+  background-color: var(--background-app);
+  border-color: var(--border-subtle);
+}
+
+.dropdown__link {
+  color: var(--text-standard);
+}
+
+.dropdown__link:hover {
+  background-color: var(--background-subtle);
+  color: var(--text-prominent);
+}
+
+.iconExternalLink_nPIU {
+  margin-left: 8px !important;
+}
+
+/* Force hamburger menu to appear earlier to prevent navbar overlap with smooth transitions */
+@media (max-width: 996px) {
+  .navbar__item {
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
+    /* Use visibility instead of display for smoother transitions */
+    visibility: hidden;
+  }
+
+  .navbar__toggle {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    display: inherit !important;
+  }
+
+  .navbar-sidebar {
+    display: block;
+  }
+}
+
+/* Shrink inkeep search box some on smaller screens */
+@media (max-width: 1450px) {
+  #inkeep {
+    max-width: 180px;
+  }
+}
+
+/* Ensure navbar items are visible above the breakpoint */
+@media (min-width: 997px) {
+  .navbar__item {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  .navbar__toggle {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.carousel-image {
+  width: 100%;      /* Make the image fill the width */
+  object-fit: cover; /* Ensure the image covers the area while maintaining aspect ratio */
+  border-radius: 8px; /* Optional: rounded corners */
+}
+
+.button-grant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  font-weight: bold;
+  text-decoration: none;
+  cursor: default;
+}
+
+
+.button-grant h2 {
+  margin-top: 15px;
+}
