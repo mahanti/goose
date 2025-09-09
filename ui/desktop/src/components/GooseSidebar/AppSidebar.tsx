@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, MoreHorizontal, Settings } from 'lucide-react';
 import {
   SidebarContent,
   SidebarFooter,
@@ -10,14 +10,20 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarSeparator,
+  SidebarHeader,
 } from '../ui/sidebar';
 import { Input } from '../ui/input';
-import { Dialog, DialogContent, DialogHeaderWithActions, DialogTitle } from '../ui/dialog';
+import { Button } from '../ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 import { ViewOptions, View } from '../../utils/navigationUtils';
 import { useChatContext } from '../../contexts/ChatContext';
 import { DEFAULT_CHAT_TITLE } from '../../contexts/ChatContext';
 import { SessionsSection } from './SessionsSection';
-import { fetchSessions, type Session } from '../../sessions';
 
 interface SidebarProps {
   onSelectSession: (sessionId: string) => void;
@@ -48,133 +54,13 @@ const menuItems: NavigationEntry[] = [
     label: 'New chat',
     tooltip: 'Start a new chat with Goose',
   },
-  {
-    type: 'item',
-    path: '#search',
-    label: 'Search chats',
-    tooltip: 'Search through chat history',
-  },
-  { type: 'separator' },
-  {
-    type: 'item',
-    path: '/recipes',
-    label: 'Recipes',
-    tooltip: 'Browse your saved recipes',
-  },
-  {
-    type: 'item',
-    path: '/schedules',
-    label: 'Scheduler',
-    tooltip: 'Manage scheduled runs',
-  },
-  {
-    type: 'item',
-    path: '/extensions',
-    label: 'Extensions',
-    tooltip: 'Manage your extensions',
-  },
 ];
 
-// Search Modal Component
-interface SearchModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelectSession: (sessionId: string) => void;
-}
-
-const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectSession }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchSessions().then((allSessions) => {
-        const sortedSessions = allSessions.sort((a, b) => 
-          new Date(b.modified).getTime() - new Date(a.modified).getTime()
-        );
-        setSessions(sortedSessions);
-        setFilteredSessions(sortedSessions);
-      });
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = sessions.filter((session) =>
-        (session.metadata.description || session.id)
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-      );
-      setFilteredSessions(filtered);
-    } else {
-      setFilteredSessions(sessions);
-    }
-  }, [searchTerm, sessions]);
-
-  const handleSelectSession = (sessionId: string) => {
-    onSelectSession(sessionId);
-    onClose();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[80vh] flex flex-col">
-        <DialogHeaderWithActions>
-          <DialogTitle>Search Chats</DialogTitle>
-        </DialogHeaderWithActions>
-
-        {/* Search Input */}
-        <div className="pb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
-            <Input
-              type="text"
-              placeholder="Search through your chat history..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-              autoFocus
-            />
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto pb-6">
-          <div className="space-y-2">
-            {filteredSessions.map((session) => {
-              const hasDescription = session.metadata.description && session.metadata.description.trim() !== '';
-              return (
-                <div
-                  key={session.id}
-                  onClick={() => handleSelectSession(session.id)}
-                  className="p-3 hover:bg-background-muted rounded-xl cursor-pointer transition-colors border border-border-subtle bg-background-card hover:shadow-sm"
-                >
-                  <div className="font-medium text-text-default mb-1">
-                    {hasDescription ? session.metadata.description : `Session ${session.id}`}
-                  </div>
-                  <div className="text-sm text-text-muted">
-                    {new Date(session.modified).toLocaleDateString()} • {session.metadata.working_dir || 'No directory'}
-                  </div>
-                </div>
-              );
-            })}
-            {filteredSessions.length === 0 && searchTerm && (
-              <div className="text-center py-8 text-text-muted">
-                No chats found matching "{searchTerm}"
-              </div>
-            )}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const AppSidebar: React.FC<SidebarProps> = ({ currentPath, onSelectSession, refreshTrigger }) => {
   const navigate = useNavigate();
   const chatContext = useChatContext();
-  const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -214,9 +100,7 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentPath, onSelectSession, refr
     }
 
     const handleClick = () => {
-      if (entry.path === '#search') {
-        setIsSearchModalOpen(true);
-      } else if (entry.path === '/' && entry.label === 'New chat') {
+      if (entry.path === '/' && entry.label === 'New chat') {
         // Start a new chat by resetting the current session
         navigate('/', { state: { resetChat: true }, replace: true });
       } else {
@@ -245,29 +129,78 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentPath, onSelectSession, refr
     );
   };
 
+  const handleDropdownItemClick = (path: string) => {
+    navigate(path);
+  };
+
   return (
     <>
-      <SidebarContent className="pt-16 flex flex-col h-full">
+      {/* Sidebar Header with Ellipsis Menu */}
+      <SidebarHeader className="px-2 py-3">
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="xs"
+                className="absolute right-6 w-6 h-6 p-0 hover:bg-background-medium/50"
+                style={{ right: '24px' }}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => handleDropdownItemClick('/recipes')}>
+                Recipes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDropdownItemClick('/schedules')}>
+                Scheduler
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDropdownItemClick('/extensions')}>
+                Extensions
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDropdownItemClick('/settings')}>
+                Settings
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="pt-4 flex flex-col h-full">
         {/* Sticky navigation section */}
         <div className="sticky top-0 bg-sidebar z-10 pb-2">
           <SidebarMenu>{menuItems.map((entry, index) => renderMenuItem(entry, index))}</SidebarMenu>
+          
+          {/* Search Input */}
+          <div className="px-2 pb-2 pt-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
+              <Input
+                type="text"
+                placeholder="Search chats..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-8 bg-background-subtle border-border-subtle"
+              />
+            </div>
+          </div>
+          
           <SidebarSeparator />
         </div>
         
-        {/* Scrollable sessions section */}
+        {/* Scrollable sessions section - extends to bottom */}
         <div className="flex-1 overflow-hidden">
-          <SessionsSection onSelectSession={onSelectSession} refreshTrigger={refreshTrigger} />
+          <SessionsSection 
+            onSelectSession={onSelectSession} 
+            refreshTrigger={refreshTrigger} 
+            searchTerm={searchTerm}
+          />
         </div>
       </SidebarContent>
 
       <SidebarFooter />
-      
-      {/* Search Modal */}
-      <SearchModal
-        isOpen={isSearchModalOpen}
-        onClose={() => setIsSearchModalOpen(false)}
-        onSelectSession={onSelectSession}
-      />
     </>
   );
 };

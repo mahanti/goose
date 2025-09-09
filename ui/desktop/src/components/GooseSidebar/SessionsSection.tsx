@@ -14,13 +14,16 @@ import { useTextAnimator } from '../../hooks/use-text-animator';
 interface SessionsSectionProps {
   onSelectSession: (sessionId: string) => void;
   refreshTrigger?: number;
+  searchTerm?: string;
 }
 
 export const SessionsSection: React.FC<SessionsSectionProps> = ({
   onSelectSession,
   refreshTrigger,
+  searchTerm = '',
 }) => {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
   const [sessionsWithDescriptions, setSessionsWithDescriptions] = useState<Set<string>>(new Set());
 
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,6 +41,20 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({
       setSessions([]);
     }
   }, []);
+
+  // Filter sessions based on search term
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = sessions.filter((session) =>
+        (session.metadata.description || session.id)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
+      );
+      setFilteredSessions(filtered);
+    } else {
+      setFilteredSessions(sessions);
+    }
+  }, [searchTerm, sessions]);
 
   // Debounced refresh function
   const debouncedRefresh = useCallback(() => {
@@ -168,15 +185,20 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({
   };
 
   return (
-    <SidebarGroup>
+    <SidebarGroup className="flex-1 flex flex-col min-h-0">
       <SidebarGroupLabel className="px-3 py-2 text-sm font-medium text-text-default">
         Recent Chats
       </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu className="space-y-1 max-h-96 overflow-y-auto">
-          {sessions.map((session) => (
+      <SidebarGroupContent className="flex-1 overflow-hidden">
+        <SidebarMenu className="space-y-1 h-full overflow-y-auto">
+          {filteredSessions.map((session) => (
             <SessionItem key={session.id} session={session} />
           ))}
+          {searchTerm && filteredSessions.length === 0 && (
+            <div className="text-center py-8 text-text-muted">
+              No chats found matching "{searchTerm}"
+            </div>
+          )}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
