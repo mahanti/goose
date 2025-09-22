@@ -3,7 +3,7 @@ import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { useConfig } from '../../ConfigContext';
 import { cn } from '../../../utils';
-import { Save, RotateCcw, FileText, Settings } from 'lucide-react';
+import { FileText, Settings } from 'lucide-react';
 import { toastSuccess, toastError } from '../../../toasts';
 import { getUiNames, providerPrefixes } from '../../../utils/configUtils';
 import type { ConfigData, ConfigValue } from '../../../types/config';
@@ -191,12 +191,12 @@ export default function ConfigSettings() {
                         disabled={!modifiedKeys.has(key) || saving === key}
                         variant="ghost"
                         size="sm"
-                        className="min-w-[60px]"
+                        className="min-w-[60px] rounded-full px-3"
                       >
                         {saving === key ? (
                           <span className="text-xs">Saving...</span>
                         ) : (
-                          <Save className="h-4 w-4" />
+                          <span className="text-xs">Save</span>
                         )}
                       </Button>
                     </div>
@@ -207,12 +207,15 @@ export default function ConfigSettings() {
 
             <DialogFooter className="gap-2">
               {modifiedKeys.size > 0 && (
-                <Button onClick={handleReset} variant="outline">
-                  <RotateCcw className="h-4 w-4 mr-2" />
+                <Button onClick={handleReset} variant="outline" className="rounded-full px-6">
                   Reset Changes
                 </Button>
               )}
-              <Button onClick={() => setIsModalOpen(false)} variant="default">
+              <Button
+                onClick={() => setIsModalOpen(false)}
+                variant="default"
+                className="rounded-full px-6"
+              >
                 Done
               </Button>
             </DialogFooter>

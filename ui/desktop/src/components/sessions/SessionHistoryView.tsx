@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { resumeSession, type SessionDetails } from '../../sessions';
 import { Button } from '../ui/button';
-import { toast } from 'react-toastify';
 import { MainPanelLayout } from '../Layout/MainPanelLayout';
 import { ScrollArea } from '../ui/scroll-area';
 import { formatMessageTimestamp } from '../../utils/timeUtils';
@@ -32,6 +31,7 @@ import { ContextManagerProvider } from '../context_management/ContextManager';
 import { Message } from '../../types/message';
 import BackButton from '../ui/BackButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/Tooltip';
+import { useToast } from '../ui/custom-toast';
 
 // Helper function to determine if a message is a user message (same as useChatEngine)
 const isUserMessage = (message: Message): boolean => {
@@ -147,6 +147,7 @@ const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
   onRetry,
   showActionButtons = true,
 }) => {
+  const { showToast } = useToast();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareLink, setShareLink] = useState<string>('');
   const [isSharing, setIsSharing] = useState(false);
@@ -194,9 +195,10 @@ const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
       setIsShareModalOpen(true);
     } catch (error) {
       console.error('Error sharing session:', error);
-      toast.error(
-        `Failed to share session: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      showToast({
+        title: `Failed to share session: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        state: 'error',
+      });
     } finally {
       setIsSharing(false);
     }
@@ -211,7 +213,10 @@ const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
       })
       .catch((err) => {
         console.error('Failed to copy link:', err);
-        toast.error('Failed to copy link to clipboard');
+        showToast({
+          title: 'Failed to copy link to clipboard',
+          state: 'error',
+        });
       });
   };
 
@@ -219,7 +224,10 @@ const SessionHistoryView: React.FC<SessionHistoryViewProps> = ({
     try {
       resumeSession(session);
     } catch (error) {
-      toast.error(`Could not launch session: ${error instanceof Error ? error.message : error}`);
+      showToast({
+        title: `Could not launch session: ${error instanceof Error ? error.message : error}`,
+        state: 'error',
+      });
     }
   };
 

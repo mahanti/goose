@@ -12,7 +12,7 @@ import { ExtensionFormData } from '../utils';
 import EnvVarsSection from './EnvVarsSection';
 import HeadersSection from './HeadersSection';
 import ExtensionConfigFields from './ExtensionConfigFields';
-import { PlusIcon, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { PlusIcon, Edit, AlertTriangle } from 'lucide-react';
 import ExtensionInfoFields from './ExtensionInfoFields';
 import ExtensionTimeoutField from './ExtensionTimeoutField';
 import { upsertConfig } from '../../../../api/sdk.gen';
@@ -284,7 +284,7 @@ export default function ExtensionModal({
   return (
     <>
       <Dialog open={true} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {getModalIcon()}
@@ -375,7 +375,11 @@ export default function ExtensionModal({
           <DialogFooter className="pt-2">
             {showDeleteConfirmation ? (
               <>
-                <Button variant="outline" onClick={() => setShowDeleteConfirmation(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirmation(false)}
+                  className="rounded-full px-6"
+                >
                   Cancel
                 </Button>
                 <Button
@@ -386,8 +390,8 @@ export default function ExtensionModal({
                     }
                   }}
                   variant="destructive"
+                  className="rounded-full px-6"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
                   Confirm removal
                 </Button>
               </>
@@ -397,19 +401,19 @@ export default function ExtensionModal({
                   <Button
                     onClick={() => setShowDeleteConfirmation(true)}
                     variant="outline"
-                    className="text-red-500 hover:text-red-600"
+                    className="text-red-500 hover:text-red-600 rounded-full px-6"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
                     Remove extension
                   </Button>
                 )}
-                <Button variant="outline" onClick={handleClose}>
+                <Button variant="outline" onClick={handleClose} className="rounded-full px-6">
                   Cancel
                 </Button>
                 <Button
                   data-testid="extension-submit-btn"
                   onClick={handleSubmit}
                   disabled={!isFormValid()}
+                  className="rounded-full px-6"
                 >
                   {submitLabel}
                 </Button>

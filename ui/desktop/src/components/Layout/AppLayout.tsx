@@ -37,16 +37,16 @@ const AppLayoutContent: React.FC<AppLayoutProps> = ({ setIsGoosehintsModalOpen }
         navigate('/settings', { state: viewOptions });
         break;
       case 'extensions':
-        navigate('/extensions', { state: viewOptions });
+        navigate('/settings?tab=extensions', { state: { ...viewOptions, tab: 'extensions' } });
         break;
       case 'sessions':
         navigate('/sessions');
         break;
       case 'schedules':
-        navigate('/schedules');
+        navigate('/settings?tab=schedules', { state: { ...viewOptions, tab: 'schedules' } });
         break;
       case 'recipes':
-        navigate('/recipes');
+        navigate('/settings?tab=recipes', { state: { ...viewOptions, tab: 'recipes' } });
         break;
       case 'permission':
         navigate('/permission', { state: viewOptions });
@@ -69,8 +69,9 @@ const AppLayoutContent: React.FC<AppLayoutProps> = ({ setIsGoosehintsModalOpen }
   };
 
   const handleSelectSession = async (sessionId: string) => {
-    // Navigate to chat with session data
-    navigate('/', { state: { sessionId } });
+    console.log('AppLayout: handleSelectSession called with sessionId:', sessionId);
+    // Navigate to pair route (which handles chat sessions) with session data
+    navigate('/pair', { state: { resumeSessionId: sessionId } });
   };
 
   const handleNewWindow = () => {
@@ -106,7 +107,7 @@ const AppLayoutContent: React.FC<AppLayoutProps> = ({ setIsGoosehintsModalOpen }
           currentPath={location.pathname}
         />
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700">
         <Outlet />
       </SidebarInset>
     </div>

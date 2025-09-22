@@ -74,31 +74,35 @@ const SessionsView: React.FC<SessionsViewProps> = ({ setView }) => {
 
   // If we're loading an initial session or have a selected showSessionHistory, show the session history view
   // Otherwise, show the sessions list view
-  return (showSessionHistory && selectedSession) || (isLoadingSession && initialSessionId) ? (
-    <SessionHistoryView
-      session={
-        selectedSession || {
-          sessionId: initialSessionId || '',
-          messages: [],
-          metadata: {
-            description: 'Loading...',
-            working_dir: '',
-            message_count: 0,
-            total_tokens: 0,
-          },
-        }
-      }
-      isLoading={isLoadingSession}
-      error={error}
-      onBack={handleBackToSessions}
-      onRetry={handleRetryLoadSession}
-    />
-  ) : (
-    <SessionListView
-      setView={setView}
-      onSelectSession={handleSelectSession}
-      selectedSessionId={selectedSession?.sessionId ?? null}
-    />
+  return (
+    <div className="w-full max-w-[720px] mx-auto">
+      {(showSessionHistory && selectedSession) || (isLoadingSession && initialSessionId) ? (
+        <SessionHistoryView
+          session={
+            selectedSession || {
+              sessionId: initialSessionId || '',
+              messages: [],
+              metadata: {
+                description: 'Loading...',
+                working_dir: '',
+                message_count: 0,
+                total_tokens: 0,
+              },
+            }
+          }
+          isLoading={isLoadingSession}
+          error={error}
+          onBack={handleBackToSessions}
+          onRetry={handleRetryLoadSession}
+        />
+      ) : (
+        <SessionListView
+          setView={setView}
+          onSelectSession={handleSelectSession}
+          selectedSessionId={selectedSession?.sessionId ?? null}
+        />
+      )}
+    </div>
   );
 };
 

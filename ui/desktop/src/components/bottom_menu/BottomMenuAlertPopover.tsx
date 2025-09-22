@@ -1,8 +1,8 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
-import { FaCircle } from 'react-icons/fa';
+import { useRef, useEffect, useState } from 'react';
 import { cn } from '../../utils';
 import { Alert, AlertType } from '../alerts';
 import { AlertBox } from '../alerts';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 interface AlertPopoverProps {
   alerts: Alert[];
@@ -10,84 +10,9 @@ interface AlertPopoverProps {
 
 export default function BottomMenuAlertPopover({ alerts }: AlertPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [wasAutoShown, setWasAutoShown] = useState(false);
-  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const [shouldShowIndicator, setShouldShowIndicator] = useState(false); // Stable indicator state
   const previousAlertsRef = useRef<Alert[]>([]);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  // Calculate popover position
-  const calculatePosition = useCallback(() => {
-    if (!triggerRef.current || !popoverRef.current) return;
-
-    const triggerRect = triggerRef.current.getBoundingClientRect();
-    const popoverWidth = 275;
-
-    // Get the actual rendered height of the popover
-    const popoverHeight = popoverRef.current.offsetHeight || 120;
-    const offset = 8; // Small gap to avoid blocking the trigger dot
-
-    // Position above the trigger, centered horizontally
-    let top = triggerRect.top - popoverHeight - offset;
-    let left = triggerRect.left + triggerRect.width / 2 - popoverWidth / 2;
-
-    // Ensure popover doesn't go off-screen
-    const viewportWidth = window.innerWidth;
-
-    // Adjust horizontal position if off-screen
-    if (left < 10) {
-      left = 10;
-    } else if (left + popoverWidth > viewportWidth - 10) {
-      left = viewportWidth - popoverWidth - 10;
-    }
-
-    // If popover would go above viewport, show it below the trigger instead
-    if (top < 10) {
-      top = triggerRect.bottom + offset;
-    }
-
-    setPopoverPosition({ top, left });
-  }, []);
-
-  // Update position when popover opens
-  useEffect(() => {
-    if (isOpen) {
-      calculatePosition();
-      // Recalculate on window resize
-      const handleResize = () => calculatePosition();
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-    return undefined;
-  }, [isOpen, calculatePosition]);
-
-  // Recalculate position after popover is rendered to get actual height
-  useEffect(() => {
-    if (isOpen && popoverRef.current) {
-      // Small delay to ensure DOM is updated
-      const timer = setTimeout(() => {
-        calculatePosition();
-      }, 10);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [isOpen, calculatePosition]);
-
-  // Function to start the hide timer
-  const startHideTimer = useCallback((duration = 3000) => {
-    // Clear any existing timer
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-    }
-    // Start new timer
-    hideTimerRef.current = setTimeout(() => {
-      setIsOpen(false);
-      setWasAutoShown(false);
-    }, duration);
-  }, []);
+  const dropdownId = useRef('alert-popover');
 
   // Manage stable indicator visibility - once we have alerts, keep showing until explicitly cleared
   useEffect(() => {
@@ -118,69 +43,31 @@ export default function BottomMenuAlertPopover({ alerts }: AlertPopoverProps) {
     // Auto show the popover for new auto-show alerts
     if (hasNewAutoShowAlert) {
       setIsOpen(true);
-      setWasAutoShown(true);
-      // Start 3 second timer for auto-show
-      startHideTimer(3000);
     }
-  }, [alerts, startHideTimer]);
+  }, [alerts]);
 
-  // Handle auto-hide based on hover state changes
-  useEffect(() => {
-    if (!isHovered && isOpen && !wasAutoShown) {
-      // Only start 1 second timer for manual interactions
-      startHideTimer(1000);
-    }
-  }, [isHovered, isOpen, startHideTimer, wasAutoShown]);
-
-  // Handle click outside - but not when editing threshold
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // Check if we're clicking on an input or button inside the popover
-      const target = event.target as HTMLElement;
-      const isInteractiveElement =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'BUTTON' ||
-        target.closest('button') !== null ||
-        target.closest('input') !== null;
-
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node) &&
-        !isInteractiveElement
-      ) {
-        setIsOpen(false);
-        setWasAutoShown(false);
-      }
-    };
-
-    if (isOpen) {
-      // Use mouseup instead of mousedown to allow button clicks to complete
-      document.addEventListener('mouseup', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mouseup', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  // Listen for custom event to hide the popover
+  // Listen for events to hide this popover
   useEffect(() => {
     const handleHidePopover = () => {
       if (isOpen) {
         setIsOpen(false);
-        setWasAutoShown(false);
-        setIsHovered(false);
-        // Clear any pending hide timer
-        if (hideTimerRef.current) {
-          clearTimeout(hideTimerRef.current);
-          hideTimerRef.current = null;
-        }
+      }
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleCloseAllDropdowns = (event: any) => {
+      // Don't close this dropdown if it was the one that sent the event
+      if (event.detail?.senderId !== dropdownId.current && isOpen) {
+        setIsOpen(false);
       }
     };
 
     window.addEventListener('hide-alert-popover', handleHidePopover);
+    window.addEventListener('close-all-dropdowns', handleCloseAllDropdowns);
+
     return () => {
       window.removeEventListener('hide-alert-popover', handleHidePopover);
+      window.removeEventListener('close-all-dropdowns', handleCloseAllDropdowns);
     };
   }, [isOpen]);
 
@@ -199,68 +86,66 @@ export default function BottomMenuAlertPopover({ alerts }: AlertPopoverProps) {
       : 'text-[#cc4b03]'; // Orange color for warning alerts
 
   return (
-    <>
-      <div className="relative">
-        <button
-          ref={triggerRef}
-          className="cursor-pointer flex items-center justify-center min-w-5 min-h-5 rounded hover:bg-background-muted"
-          onClick={() => {
-            setIsOpen(true);
-          }}
-          onMouseEnter={() => {
-            setIsOpen(true);
-            setIsHovered(true);
-            setWasAutoShown(false);
-            if (hideTimerRef.current) {
-              clearTimeout(hideTimerRef.current);
-            }
-          }}
-          onMouseLeave={() => {
-            // Start a short timer to allow moving to content
-            hideTimerRef.current = setTimeout(() => {
-              if (!isHovered) {
-                setIsHovered(false);
-                setIsOpen(false);
-              }
-            }, 100);
-          }}
-        >
-          <div className={cn('relative', triggerColor)}>
-            <FaCircle size={5} />
+    <DropdownMenu
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (open) {
+          // Close all other dropdowns when this one opens
+          window.dispatchEvent(
+            new CustomEvent('close-all-dropdowns', {
+              detail: { senderId: dropdownId.current },
+            })
+          );
+        }
+        setIsOpen(open);
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        <button className="cursor-pointer flex items-center justify-center text-text-default/70 hover:text-text-default transition-colors rounded-full border border-border-default hover:bg-background-muted px-2 py-1 h-7">
+          {/* Context usage visualization with dots */}
+          <div className="flex items-center gap-0.5">
+            {/* Generate 10 dots for percentage visualization */}
+            {Array.from({ length: 10 }, (_, i) => {
+              const contextPercentage = Math.min((alerts.length / 5) * 100, 100); // Estimate based on alerts
+              const dotFilled = (i + 1) * 10 <= contextPercentage;
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    'w-1 h-1 rounded-full transition-colors',
+                    dotFilled ? triggerColor.replace('text-', 'bg-') : 'bg-gray-300'
+                  )}
+                />
+              );
+            })}
           </div>
         </button>
-      </div>
-
-      {/* Popover rendered separately to avoid blocking clicks */}
-      {isOpen && (
-        <div
-          ref={popoverRef}
-          className="fixed w-[275px] p-0 rounded-lg overflow-hidden bg-app border z-50 shadow-lg pointer-events-auto text-left"
-          style={{
-            top: `${popoverPosition.top}px`,
-            left: `${popoverPosition.left}px`,
-            visibility: popoverPosition.top === 0 ? 'hidden' : 'visible',
-          }}
-          onMouseEnter={() => {
-            setIsHovered(true);
-            if (hideTimerRef.current) {
-              clearTimeout(hideTimerRef.current);
-            }
-          }}
-          onMouseLeave={() => {
-            setIsHovered(false);
-            setIsOpen(false);
-          }}
-        >
-          <div className="flex flex-col">
-            {alerts.map((alert, index) => (
-              <div key={index} className={cn(index > 0 && 'border-t border-white/20')}>
-                <AlertBox alert={alert} />
-              </div>
-            ))}
-          </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="top"
+        align="center"
+        className="w-80 max-h-96 p-0 z-[100] bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-2xl"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        sideOffset={4}
+        collisionPadding={10}
+      >
+        <div className="flex flex-col">
+          {alerts.map((alert, index) => (
+            <div key={index} className={cn(index > 0 && 'border-t border-borderSubtle')}>
+              <AlertBox
+                alert={alert}
+                className={cn(
+                  // Override the default dark background for better dropdown integration
+                  '!bg-white dark:!bg-gray-800 !text-gray-900 dark:!text-gray-100 border-l-4',
+                  alert.type === AlertType.Error && 'border-l-red-500',
+                  alert.type === AlertType.Warning && 'border-l-orange-500',
+                  alert.type === AlertType.Info && 'border-l-green-500'
+                )}
+              />
+            </div>
+          ))}
         </div>
-      )}
-    </>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

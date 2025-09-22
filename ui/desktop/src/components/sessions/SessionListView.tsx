@@ -1,13 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo, startTransition } from 'react';
-import {
-  MessageSquareText,
-  Target,
-  AlertCircle,
-  Calendar,
-  Folder,
-  Edit2,
-  Trash2,
-} from 'lucide-react';
+import { MessageSquareText, Target, AlertCircle, Calendar, Folder } from 'lucide-react';
 import { fetchSessions, updateSessionMetadata, deleteSession, type Session } from '../../sessions';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -19,8 +11,8 @@ import { SearchHighlighter } from '../../utils/searchHighlighter';
 import { MainPanelLayout } from '../Layout/MainPanelLayout';
 import { groupSessionsByDate, type DateGroup } from '../../utils/dateUtils';
 import { Skeleton } from '../ui/skeleton';
-import { toast } from 'react-toastify';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
+import { useToast } from '../ui/custom-toast';
 
 interface EditSessionModalProps {
   session: Session | null;
@@ -34,6 +26,7 @@ const EditSessionModal = React.memo<EditSessionModalProps>(
   ({ session, isOpen, onClose, onSave, disabled = false }) => {
     const [description, setDescription] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
       if (session && isOpen) {
@@ -62,18 +55,24 @@ const EditSessionModal = React.memo<EditSessionModalProps>(
         // Close modal, then show success toast on a timeout to let the UI update complete.
         onClose();
         setTimeout(() => {
-          toast.success('Session description updated successfully');
+          showToast({
+            title: 'Session description updated successfully',
+            state: 'success',
+          });
         }, 300);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         console.error('Failed to update session description:', errorMessage);
-        toast.error(`Failed to update session description: ${errorMessage}`);
+        showToast({
+          title: `Failed to update session description: ${errorMessage}`,
+          state: 'error',
+        });
         // Reset to original description on error
         setDescription(session.metadata.description || session.id);
       } finally {
         setIsUpdating(false);
       }
-    }, [session, description, onSave, onClose, disabled]);
+    }, [session, description, onSave, onClose, disabled, showToast]);
 
     const handleCancel = useCallback(() => {
       if (!isUpdating) {
@@ -121,13 +120,19 @@ const EditSessionModal = React.memo<EditSessionModalProps>(
           </div>
 
           <div className="flex justify-end space-x-3 mt-6">
-            <Button onClick={handleCancel} variant="ghost" disabled={isUpdating || disabled}>
+            <Button
+              onClick={handleCancel}
+              variant="ghost"
+              disabled={isUpdating || disabled}
+              className="rounded-full px-6"
+            >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
               disabled={!description.trim() || isUpdating || disabled}
               variant="default"
+              className="rounded-full px-6"
             >
               {isUpdating ? 'Saving...' : 'Save'}
             </Button>
@@ -169,6 +174,7 @@ interface SessionListViewProps {
 
 const SessionListView: React.FC<SessionListViewProps> = React.memo(
   ({ onSelectSession, selectedSessionId }) => {
+    const { showToast } = useToast();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
     const [dateGroups, setDateGroups] = useState<DateGroup[]>([]);
@@ -383,14 +389,20 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
 
       try {
         await deleteSession(sessionToDeleteId);
-        toast.success('Session deleted successfully');
+        showToast({
+          title: 'Session deleted successfully',
+          state: 'success',
+        });
         loadSessions();
       } catch (error) {
         console.error('Error deleting session:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        toast.error(`Failed to delete session "${sessionName}": ${errorMessage}`);
+        showToast({
+          title: `Failed to delete session "${sessionName}": ${errorMessage}`,
+          state: 'error',
+        });
       }
-    }, [sessionToDelete, loadSessions]);
+    }, [sessionToDelete, loadSessions, showToast]);
 
     const handleCancelDelete = useCallback(() => {
       setShowDeleteConfirmation(false);
@@ -429,55 +441,59 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
       return (
         <Card
           onClick={handleCardClick}
-          className="session-item h-full py-3 px-4 hover:shadow-default cursor-pointer transition-all duration-150 flex flex-col justify-between relative group"
+          className="py-2 px-4 mb-2 bg-background-default border-none hover:bg-background-muted cursor-pointer transition-all duration-150"
           ref={(el) => setSessionRefs(session.id, el)}
         >
-          <div className="absolute top-3 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={handleEditClick}
-              className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-              title="Edit session name"
-            >
-              <Edit2 className="w-3 h-3 text-textSubtle hover:text-textStandard" />
-            </button>
-            <button
-              onClick={handleDeleteClick}
-              className="p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer transition-colors"
-              title="Delete session"
-            >
-              <Trash2 className="w-3 h-3 text-red-500 hover:text-red-600" />
-            </button>
-          </div>
-
-          <div className="flex-1">
-            <h3 className="text-base mb-1 pr-16 break-words">
-              {session.metadata.description || session.id}
-            </h3>
-
-            <div className="flex items-center text-text-muted text-xs mb-1">
-              <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
-              <span>{formatMessageTimestamp(Date.parse(session.modified) / 1000)}</span>
-            </div>
-            <div className="flex items-center text-text-muted text-xs mb-1">
-              <Folder className="w-3 h-3 mr-1 flex-shrink-0" />
-              <span className="truncate">{session.metadata.working_dir}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-1 pt-2">
-            <div className="flex items-center space-x-3 text-xs text-text-muted">
-              <div className="flex items-center">
-                <MessageSquareText className="w-3 h-3 mr-1" />
-                <span className="font-mono">{session.metadata.message_count}</span>
+          <div className="flex justify-between items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-base truncate max-w-[50vw]">
+                  {session.metadata.description || session.id}
+                </h3>
               </div>
-              {session.metadata.total_tokens !== null && (
+              <div className="flex items-center text-text-muted text-xs mb-1">
+                <Calendar className="w-3 h-3 mr-1" />
+                <span>{formatMessageTimestamp(Date.parse(session.modified) / 1000)}</span>
+              </div>
+              <div className="flex items-center text-text-muted text-xs mb-2">
+                <Folder className="w-3 h-3 mr-1" />
+                <span className="truncate">{session.metadata.working_dir}</span>
+              </div>
+              <div className="flex items-center space-x-3 text-xs text-text-muted">
                 <div className="flex items-center">
-                  <Target className="w-3 h-3 mr-1" />
-                  <span className="font-mono">
-                    {(session.metadata.total_tokens || 0).toLocaleString()}
-                  </span>
+                  <MessageSquareText className="w-3 h-3 mr-1" />
+                  <span className="font-mono">{session.metadata.message_count} messages</span>
                 </div>
-              )}
+                {session.metadata.total_tokens !== null && (
+                  <div className="flex items-center">
+                    <Target className="w-3 h-3 mr-1" />
+                    <span className="font-mono">
+                      {(session.metadata.total_tokens || 0).toLocaleString()} tokens
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                onClick={handleEditClick}
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 rounded-full text-text-muted hover:text-text-standard"
+                title="Edit session name"
+              >
+                Edit
+              </Button>
+              <Button
+                onClick={handleDeleteClick}
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                title="Delete session"
+              >
+                Delete
+              </Button>
             </div>
           </div>
         </Card>
@@ -488,32 +504,28 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
     const SessionSkeleton = React.memo(({ variant = 0 }: { variant?: number }) => {
       const titleWidths = ['w-3/4', 'w-2/3', 'w-4/5', 'w-1/2'];
       const pathWidths = ['w-32', 'w-28', 'w-36', 'w-24'];
-      const tokenWidths = ['w-12', 'w-10', 'w-14', 'w-8'];
 
       return (
-        <Card className="session-skeleton h-full py-3 px-4 flex flex-col justify-between">
-          <div className="flex-1">
-            <Skeleton className={`h-5 ${titleWidths[variant % titleWidths.length]} mb-2`} />
-            <div className="flex items-center mb-1">
-              <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-            <div className="flex items-center mb-1">
-              <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
-              <Skeleton className={`h-4 ${pathWidths[variant % pathWidths.length]}`} />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-1 pt-2">
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center">
+        <Card className="py-2 px-4 mb-2 bg-background-default">
+          <div className="flex justify-between items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <Skeleton className={`h-5 ${titleWidths[variant % titleWidths.length]} mb-2`} />
+              <div className="flex items-center mb-1">
                 <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
-                <Skeleton className="h-4 w-8" />
+                <Skeleton className="h-4 w-20" />
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center mb-2">
                 <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
-                <Skeleton className={`h-4 ${tokenWidths[variant % tokenWidths.length]}`} />
+                <Skeleton className={`h-4 ${pathWidths[variant % pathWidths.length]}`} />
               </div>
+              <div className="flex items-center space-x-3">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-12" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Skeleton className="h-8 w-8" />
+              <Skeleton className="h-8 w-8" />
             </div>
           </div>
         </Card>
@@ -529,7 +541,7 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
             <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
             <p className="text-lg mb-2">Error Loading Sessions</p>
             <p className="text-sm text-center mb-4">{error}</p>
-            <Button onClick={loadSessions} variant="default">
+            <Button onClick={loadSessions} variant="default" className="rounded-full px-6">
               Try Again
             </Button>
           </div>
@@ -556,15 +568,15 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
         );
       }
 
-      // For regular rendering in grid layout
+      // For regular rendering in vertical list layout
       return (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {dateGroups.map((group) => (
-            <div key={group.label} className="space-y-4">
+            <div key={group.label} className="space-y-3">
               <div className="sticky top-0 z-10 bg-background-default/95 backdrop-blur-sm">
-                <h2 className="text-text-muted">{group.label}</h2>
+                <h2 className="text-text-muted text-sm font-medium">{group.label}</h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+              <div className="space-y-2">
                 {group.sessions.map((session) => (
                   <SessionItem
                     key={session.id}
@@ -612,39 +624,34 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(
                           : 'opacity-0 z-0 pointer-events-none'
                       }`}
                     >
-                      <div className="space-y-8">
+                      <div className="space-y-6">
                         {/* Today section */}
-                        <div className="space-y-4">
-                          <Skeleton className="h-6 w-16" />
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                        <div className="space-y-3">
+                          <Skeleton className="h-5 w-16" />
+                          <div className="space-y-2">
                             <SessionSkeleton variant={0} />
                             <SessionSkeleton variant={1} />
                             <SessionSkeleton variant={2} />
-                            <SessionSkeleton variant={3} />
-                            <SessionSkeleton variant={0} />
                           </div>
                         </div>
 
                         {/* Yesterday section */}
-                        <div className="space-y-4">
-                          <Skeleton className="h-6 w-20" />
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                        <div className="space-y-3">
+                          <Skeleton className="h-5 w-20" />
+                          <div className="space-y-2">
                             <SessionSkeleton variant={1} />
                             <SessionSkeleton variant={2} />
                             <SessionSkeleton variant={3} />
                             <SessionSkeleton variant={0} />
-                            <SessionSkeleton variant={1} />
-                            <SessionSkeleton variant={2} />
                           </div>
                         </div>
 
                         {/* Additional section */}
-                        <div className="space-y-4">
-                          <Skeleton className="h-6 w-24" />
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                        <div className="space-y-3">
+                          <Skeleton className="h-5 w-24" />
+                          <div className="space-y-2">
                             <SessionSkeleton variant={3} />
                             <SessionSkeleton variant={0} />
-                            <SessionSkeleton variant={1} />
                           </div>
                         </div>
                       </div>

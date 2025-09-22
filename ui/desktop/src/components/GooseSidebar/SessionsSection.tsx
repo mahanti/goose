@@ -1,17 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Search, ChevronDown, Folder, Loader2 } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { fetchSessions, type Session } from '../../sessions';
 import { Input } from '../ui/input';
-import {
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-} from '../ui/sidebar';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
-import { useTextAnimator } from '../../hooks/use-text-animator';
 
 interface SessionsSectionProps {
   onSelectSession: (sessionId: string) => void;
@@ -35,7 +25,6 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({
     yesterday: [],
     older: {},
   });
-  const [sessionsWithDescriptions, setSessionsWithDescriptions] = useState<Set<string>>(new Set());
 
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -186,24 +175,6 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({
     const isRecentSession = sessionDate > fiveMinutesAgo;
     const shouldShowLoading =
       !hasDescription && isNewSession && messageCount <= 2 && isRecentSession;
-    const [isAnimating, setIsAnimating] = useState(false);
-
-    // Use text animator only for sessions that need animation
-    const descriptionRef = useTextAnimator({
-      text: isAnimating ? session.metadata.description : '',
-    });
-
-    // Track when description becomes available and trigger animation
-    useEffect(() => {
-      if (hasDescription && !sessionsWithDescriptions.has(session.id)) {
-        setSessionsWithDescriptions((prev) => new Set(prev).add(session.id));
-
-        // Only animate for new sessions that were showing loading
-        if (shouldShowLoading) {
-          setIsAnimating(true);
-        }
-      }
-    }, [hasDescription, session.id, shouldShowLoading]);
 
     const handleClick = () => {
       console.log('SessionItem: Clicked on session:', session.id);
@@ -211,146 +182,87 @@ export const SessionsSection: React.FC<SessionsSectionProps> = ({
     };
 
     return (
-      <SidebarMenuItem key={session.id}>
-        <SidebarMenuButton
-          onClick={handleClick}
-          className="cursor-pointer w-56 transition-all duration-300 ease-in-out hover:bg-background-medium hover:shadow-sm rounded-xl text-text-muted hover:text-text-default h-fit flex items-start transform hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <div className="flex flex-col w-full">
-            <div className="text-sm w-48 truncate mb-1 px-1 text-ellipsis text-text-default flex items-center gap-2">
-              {shouldShowLoading ? (
-                <div className="flex items-center gap-2 animate-in fade-in duration-300">
-                  <Loader2 className="size-3 animate-spin text-text-default" />
-                  <span className="text-text-default animate-pulse">Generating description...</span>
-                </div>
-              ) : (
-                <span
-                  ref={isAnimating ? descriptionRef : undefined}
-                  className={`transition-all duration-300 ${isAnimating ? 'animate-in fade-in duration-300' : ''}`}
-                >
-                  {hasDescription ? session.metadata.description : `Session ${session.id}`}
-                </span>
-              )}
+      <button
+        key={session.id}
+        onClick={handleClick}
+        className="w-full text-left py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 group"
+      >
+        <div className="truncate">
+          {shouldShowLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="size-3 animate-spin" />
+              <span className="animate-pulse text-gray-500">Generating...</span>
             </div>
-            <div className="text-xs w-48 truncate px-1 flex items-center gap-2 text-ellipsis transition-colors duration-300">
-              <Folder className="size-4 transition-transform duration-300 group-hover:scale-110" />
-              <span className="transition-all duration-300">{session.metadata.working_dir}</span>
+          ) : (
+            <div className="truncate text-gray-900 dark:text-gray-100">
+              {hasDescription ? session.metadata.description : `Session ${session.id}`}
             </div>
-          </div>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
+          )}
+        </div>
+      </button>
     );
   };
 
-  const renderSessionGroup = (sessions: Session[], title: string, index: number) => {
+  const renderSessionGroup = (sessions: Session[], title: string) => {
     if (sessions.length === 0) return null;
 
-    const isFirstTwoGroups = index < 2;
-
     return (
-      <Collapsible defaultOpen={isFirstTwoGroups} className="group/collapsible">
-        <SidebarGroup>
-          <CollapsibleTrigger className="w-full">
-            <SidebarGroupLabel className="flex cursor-pointer items-center justify-between text-text-default hover:text-text-default h-12 pl-3 transition-all duration-200 rounded-lg">
-              <div className="flex min-w-0 items-center">
-                <span className="opacity-100 transition-all duration-300 text-xs font-medium">
-                  {title}
-                </span>
-              </div>
-              <ChevronDown className="size-4 text-text-muted flex-shrink-0 opacity-100 transition-all duration-300 ease-in-out group-data-[state=open]/collapsible:rotate-180" />
-            </SidebarGroupLabel>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up overflow-hidden transition-all duration-300 ease-in-out">
-            <SidebarGroupContent>
-              <SidebarMenu className="mb-2 space-y-1">
-                {sessions.map((session, sessionIndex) => (
-                  <div
-                    key={session.id}
-                    className="animate-in slide-in-from-left-2 fade-in duration-300"
-                    style={{
-                      animationDelay: `${sessionIndex * 50}ms`,
-                      animationFillMode: 'both',
-                    }}
-                  >
-                    <SessionItem session={session} />
-                  </div>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </CollapsibleContent>
-        </SidebarGroup>
-      </Collapsible>
+      <div className="mb-4">
+        <div className="py-1">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{title}</span>
+        </div>
+        <div className="space-y-1">
+          {sessions.map((session) => (
+            <SessionItem key={session.id} session={session} />
+          ))}
+        </div>
+      </div>
     );
   };
 
   return (
-    <Collapsible defaultOpen={false} className="group/collapsible rounded-xl">
-      <SidebarGroup className="px-1">
-        <CollapsibleTrigger className="w-full">
-          <SidebarGroupLabel className="flex cursor-pointer items-center py-6 justify-between text-text-default px-4 transition-all duration-200 hover:bg-background-default rounded-lg">
-            <div className="flex min-w-0 items-center">
-              <span className="text-sm">Sessions</span>
-            </div>
-            <ChevronDown className="size-4 text-text-muted flex-shrink-0 opacity-100 transition-all duration-300 ease-in-out group-data-[state=open]/collapsible:rotate-180" />
-          </SidebarGroupLabel>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up overflow-hidden transition-all duration-300 ease-in-out">
-          <SidebarGroupContent>
-            {/* Search Input */}
-            <div className="p-1 pb-2 animate-in slide-in-from-top-2 fade-in duration-300">
-              <div className="relative flex flex-row items-center gap-2">
-                <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search sessions..."
-                  className="pl-8 transition-all duration-200 focus:ring-2 focus:ring-borderProminent"
-                  value={searchTerm}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setSearchTerm(e.target.value)
-                  }
-                />
-              </div>
-            </div>
+    <div className="px-2">
+      <div className="py-2">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 px-2">Sessions</span>
+      </div>
 
-            {/* Sessions Groups */}
-            <div className="space-y-2">
-              {(() => {
-                let groupIndex = 0;
-                const groups = [
-                  { sessions: groupedSessions.today, title: 'Today' },
-                  { sessions: groupedSessions.yesterday, title: 'Yesterday' },
-                  ...Object.entries(groupedSessions.older).map(([date, sessions]) => ({
-                    sessions,
-                    title: new Date(date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    }),
-                  })),
-                ];
+      {/* Search Input */}
+      <div className="pb-3 px-2">
+        <div className="relative">
+          <Search className="absolute top-2.5 left-2.5 size-4 text-gray-400" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-8 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+            value={searchTerm}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
 
-                return groups.map(({ sessions, title }) => {
-                  if (sessions.length === 0) return null;
-                  const currentIndex = groupIndex++;
-                  return (
-                    <div
-                      key={title}
-                      className="animate-in slide-in-from-left-2 fade-in duration-300"
-                      style={{
-                        animationDelay: `${currentIndex * 100}ms`,
-                        animationFillMode: 'both',
-                      }}
-                    >
-                      {renderSessionGroup(sessions, title, currentIndex)}
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </SidebarGroupContent>
-        </CollapsibleContent>
-      </SidebarGroup>
-    </Collapsible>
+      {/* Sessions Groups */}
+      <div className="space-y-1 px-2">
+        {(() => {
+          const groups = [
+            { sessions: groupedSessions.today, title: 'Today' },
+            { sessions: groupedSessions.yesterday, title: 'Yesterday' },
+            ...Object.entries(groupedSessions.older).map(([date, sessions]) => ({
+              sessions,
+              title: new Date(date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }),
+            })),
+          ];
+
+          return groups.map(({ sessions, title }) => {
+            if (sessions.length === 0) return null;
+            return <div key={title}>{renderSessionGroup(sessions, title)}</div>;
+          });
+        })()}
+      </div>
+    </div>
   );
 };

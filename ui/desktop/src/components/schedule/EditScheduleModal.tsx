@@ -1,9 +1,17 @@
 import React, { useState, useEffect, FormEvent } from 'react';
-import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select } from '../ui/Select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { ScheduledJob } from '../../schedule';
+import { Edit } from 'lucide-react';
 import cronstrue from 'cronstrue';
 
 type FrequencyValue = 'once' | 'every' | 'daily' | 'weekly' | 'monthly';
@@ -345,22 +353,18 @@ export const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-background-default shadow-xl rounded-lg z-50 flex flex-col max-h-[90vh] overflow-hidden">
-        <div className="px-6 pt-6 pb-4 flex-shrink-0">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Edit className="text-iconStandard" size={24} />
             Edit Schedule: {schedule?.id || ''}
-          </h2>
-        </div>
+          </DialogTitle>
+          <DialogDescription>Update the schedule frequency and timing settings.</DialogDescription>
+        </DialogHeader>
 
-        <form
-          id="edit-schedule-form"
-          onSubmit={handleLocalSubmit}
-          className="px-6 py-4 space-y-4 flex-grow overflow-y-auto"
-        >
+        <form id="edit-schedule-form" onSubmit={handleLocalSubmit} className="py-4 space-y-4">
           {apiErrorExternally && (
             <p className="text-red-500 text-sm mb-3 p-2 bg-red-100 dark:bg-red-900/30 rounded-md border border-red-500/50">
               {apiErrorExternally}
@@ -524,28 +528,26 @@ export const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
           </div>
         </form>
 
-        {/* Actions */}
-        <div className="mt-[8px] ml-[-24px] mr-[-24px] pt-[16px]">
+        <DialogFooter className="pt-2">
           <Button
-            type="button"
-            variant="ghost"
+            variant="outline"
             onClick={handleClose}
             disabled={isLoadingExternally}
-            className="w-full h-[60px] rounded-none border-t text-gray-400 hover:bg-gray-50 dark:border-gray-600 text-lg font-regular"
+            className="rounded-full px-6"
           >
             Cancel
           </Button>
           <Button
             type="submit"
             form="edit-schedule-form"
-            variant="ghost"
             disabled={isLoadingExternally}
-            className="w-full h-[60px] rounded-none border-t text-gray-900 dark:text-white hover:bg-gray-50 dark:border-gray-600 text-lg font-medium"
+            variant="default"
+            className="rounded-full px-6"
           >
             {isLoadingExternally ? 'Updating...' : 'Update Schedule'}
           </Button>
-        </div>
-      </Card>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

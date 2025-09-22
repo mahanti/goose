@@ -5,7 +5,6 @@ import { useRecipeManager } from '../hooks/useRecipeManager';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useSidebar } from './ui/sidebar';
 import { AgentState, InitializationContext } from '../hooks/useAgent';
-import 'react-toastify/dist/ReactToastify.css';
 import { cn } from '../utils';
 
 import { ChatType } from '../types/chat';
@@ -50,19 +49,23 @@ export default function Pair({
 
   useEffect(() => {
     const initializeFromState = async () => {
+      console.log('Pair: initializeFromState called with resumeSessionId:', resumeSessionId);
       setLoadingChat(true);
       try {
         const chat = await loadCurrentChat({
           resumeSessionId,
           setAgentWaitingMessage,
         });
+        console.log('Pair: loadCurrentChat returned chat with', chat.messages.length, 'messages');
+        console.log('Pair: Chat title:', chat.title);
+        console.log('Pair: Chat sessionId:', chat.sessionId);
         setChat(chat);
         setSearchParams((prev) => {
           prev.set('resumeSessionId', chat.sessionId);
           return prev;
         });
       } catch (error) {
-        console.log(error);
+        console.log('Pair: Error loading chat:', error);
         setFatalError(`Agent init failure: ${error instanceof Error ? error.message : '' + error}`);
       } finally {
         setLoadingChat(false);

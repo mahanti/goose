@@ -15,7 +15,7 @@ export default function ModelSettingsButtons({ setView }: ConfigureModelButtonsP
   return (
     <div className="flex gap-2 pt-4">
       <Button
-        className="flex items-center gap-2 justify-center"
+        className="rounded-full px-4"
         variant="default"
         size="sm"
         onClick={() => setIsAddModelModalOpen(true)}
@@ -31,7 +31,7 @@ export default function ModelSettingsButtons({ setView }: ConfigureModelButtonsP
       ) : null}
       {!hasPredefinedModels && (
         <Button
-          className="flex items-center gap-2 justify-center"
+          className="rounded-full px-4"
           variant="secondary"
           size="sm"
           onClick={() => {

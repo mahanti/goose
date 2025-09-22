@@ -213,7 +213,7 @@ export default function ProviderConfigurationModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeModal()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getModalIcon()}

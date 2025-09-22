@@ -68,7 +68,8 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
         const model = (await read('GOOSE_MODEL', false)) ?? config.GOOSE_DEFAULT_MODEL;
 
         if (provider && model) {
-          toastService.configure({ silent: false });
+          // Don't show automatic success toasts on app initialization
+          toastService.configure({ silent: true });
           toastService.success({
             title: 'Success!',
             msg: `Started goose with ${model} by Tetrate. You can change the model via the dropdown.`,
@@ -128,7 +129,8 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
         const model = (await read('GOOSE_MODEL', false)) ?? config.GOOSE_DEFAULT_MODEL;
 
         if (provider && model) {
-          toastService.configure({ silent: false });
+          // Don't show automatic success toasts on app initialization
+          toastService.configure({ silent: true });
           toastService.success({
             title: 'Success!',
             msg: `Started goose with ${model} by OpenRouter. You can change the model via the dropdown.`,
@@ -273,7 +275,7 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
               {/* Header section - same width as buttons, left aligned */}
               <div className="text-left mb-8 sm:mb-12">
                 <div className="space-y-3 sm:space-y-4">
-                  <div className="origin-bottom-left goose-icon-animation">
+                  <div className="origin-bottom-left spring-enter goose-spring-enter">
                     <Goose className="size-6 sm:size-8" />
                   </div>
                   <h1 className="text-2xl sm:text-4xl font-light text-left">Welcome to Goose</h1>
@@ -298,7 +300,7 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
 
                   <div
                     onClick={handleTetrateSetup}
-                    className="w-full p-4 sm:p-6 bg-background-muted border border-background-hover rounded-xl hover:border-text-muted transition-all duration-200 cursor-pointer group"
+                    className="w-full p-4 sm:p-6 bg-background-muted border border-background-hover rounded-xl hover:border-text-muted transition-spring cursor-pointer group"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -306,7 +308,7 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
                           Automatic setup with Tetrate Agent Router
                         </h3>
                       </div>
-                      <div className="text-text-muted group-hover:text-text-standard transition-colors">
+                      <div className="text-text-muted group-hover:text-text-standard transition-spring-colors">
                         <svg
                           className="w-4 h-4 sm:w-5 sm:h-5"
                           fill="none"
@@ -333,7 +335,7 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
                 <div className="relative">
                   <div
                     onClick={handleOpenRouterSetup}
-                    className="relative w-full p-4 sm:p-6 bg-background-muted border border-background-hover rounded-xl hover:border-text-muted transition-all duration-200 cursor-pointer group overflow-hidden"
+                    className="relative w-full p-4 sm:p-6 bg-background-muted border border-background-hover rounded-xl hover:border-text-muted transition-spring cursor-pointer group overflow-hidden"
                   >
                     {/* Subtle shimmer effect */}
                     <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/8 to-transparent"></div>
@@ -345,7 +347,7 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
                           Automatic setup with OpenRouter
                         </h3>
                       </div>
-                      <div className="text-text-muted group-hover:text-text-standard transition-colors">
+                      <div className="text-text-muted group-hover:text-text-standard transition-spring-colors">
                         <svg
                           className="w-4 h-4 sm:w-5 sm:h-5"
                           fill="none"
@@ -371,7 +373,7 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
                 {/* Other providers Card - outline style */}
                 <div
                   onClick={() => navigate('/welcome', { replace: true })}
-                  className="w-full p-4 sm:p-6 bg-transparent border border-background-hover rounded-xl hover:border-text-muted transition-all duration-200 cursor-pointer group"
+                  className="w-full p-4 sm:p-6 bg-transparent border border-background-hover rounded-xl hover:border-text-muted transition-spring cursor-pointer group"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -379,7 +381,7 @@ export default function ProviderGuard({ didSelectProvider, children }: ProviderG
                         Other providers
                       </h3>
                     </div>
-                    <div className="text-text-muted group-hover:text-text-standard transition-colors">
+                    <div className="text-text-muted group-hover:text-text-standard transition-spring-colors">
                       <svg
                         className="w-4 h-4 sm:w-5 sm:h-5"
                         fill="none"

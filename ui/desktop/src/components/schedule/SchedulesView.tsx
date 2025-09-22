@@ -13,8 +13,7 @@ import {
 import { ScrollArea } from '../ui/scroll-area';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
-import { TrashIcon } from '../icons/TrashIcon';
-import { Plus, RefreshCw, Pause, Play, Edit, Square, Eye, CircleDotDashed } from 'lucide-react';
+import { Pause, CircleDotDashed } from 'lucide-react';
 import { CreateScheduleModal, NewSchedulePayload } from './CreateScheduleModal';
 import { EditScheduleModal } from './EditScheduleModal';
 import ScheduleDetailView from './ScheduleDetailView';
@@ -125,9 +124,8 @@ const ScheduleCard = React.memo<{
                   disabled={isPausing || isDeleting || isSubmitting}
                   variant="outline"
                   size="sm"
-                  className="h-8"
+                  className="h-8 rounded-full px-3"
                 >
-                  <Edit className="w-4 h-4 mr-1" />
                   Edit
                 </Button>
                 <Button
@@ -142,19 +140,9 @@ const ScheduleCard = React.memo<{
                   disabled={isPausing || isDeleting}
                   variant="outline"
                   size="sm"
-                  className="h-8"
+                  className="h-8 rounded-full px-3"
                 >
-                  {job.paused ? (
-                    <>
-                      <Play className="w-4 h-4 mr-1" />
-                      Resume
-                    </>
-                  ) : (
-                    <>
-                      <Pause className="w-4 h-4 mr-1" />
-                      Pause
-                    </>
-                  )}
+                  {job.paused ? 'Resume' : 'Pause'}
                 </Button>
               </>
             )}
@@ -168,9 +156,8 @@ const ScheduleCard = React.memo<{
                   disabled={isInspecting || isKilling}
                   variant="outline"
                   size="sm"
-                  className="h-8"
+                  className="h-8 rounded-full px-3"
                 >
-                  <Eye className="w-4 h-4 mr-1" />
                   Inspect
                 </Button>
                 <Button
@@ -181,9 +168,8 @@ const ScheduleCard = React.memo<{
                   disabled={isKilling || isInspecting}
                   variant="outline"
                   size="sm"
-                  className="h-8"
+                  className="h-8 rounded-full px-3"
                 >
-                  <Square className="w-4 h-4 mr-1" />
                   Kill
                 </Button>
               </>
@@ -196,9 +182,9 @@ const ScheduleCard = React.memo<{
               disabled={isPausing || isDeleting || isKilling || isInspecting}
               variant="ghost"
               size="sm"
-              className="h-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              className="h-8 rounded-full px-3 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
-              <TrashIcon className="w-4 h-4" />
+              Delete
             </Button>
           </div>
         </div>
@@ -560,84 +546,80 @@ const SchedulesView: React.FC<SchedulesViewProps> = ({ onClose: _onClose }) => {
   return (
     <>
       <MainPanelLayout>
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="bg-background-default px-8 pb-8 pt-16">
-            <div className="flex flex-col page-transition">
-              <div className="flex justify-between items-center mb-1">
-                <h1 className="text-4xl font-light">Scheduler</h1>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing || isLoading}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
-                  </Button>
-                  <Button
-                    onClick={handleOpenCreateModal}
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create Schedule
-                  </Button>
+        <div className="w-full max-w-[720px] mx-auto">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="bg-background-default px-8 pb-8 pt-16">
+              <div className="flex flex-col page-transition">
+                <div className="flex justify-between items-center mb-1">
+                  <h1 className="text-4xl font-light">Scheduler</h1>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleRefresh}
+                      disabled={isRefreshing || isLoading}
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full px-4"
+                    >
+                      {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                    </Button>
+                    <Button onClick={handleOpenCreateModal} size="sm" className="rounded-full px-4">
+                      Create Schedule
+                    </Button>
+                  </div>
                 </div>
+                <p className="text-sm text-text-muted mb-1">
+                  Create and manage scheduled tasks to run recipes automatically at specified times.
+                </p>
               </div>
-              <p className="text-sm text-text-muted mb-1">
-                Create and manage scheduled tasks to run recipes automatically at specified times.
-              </p>
             </div>
-          </div>
 
-          <div className="flex-1 min-h-0 relative px-8">
-            <ScrollArea className="h-full">
-              <div className="h-full relative">
-                {apiError && (
-                  <div className="mb-4 p-4 bg-background-error border border-border-error rounded-md">
-                    <p className="text-text-error text-sm">Error: {apiError}</p>
-                  </div>
-                )}
+            <div className="flex-1 min-h-0 relative px-8">
+              <ScrollArea className="h-full">
+                <div className="h-full relative">
+                  {apiError && (
+                    <div className="mb-4 p-4 bg-background-error border border-border-error rounded-md">
+                      <p className="text-text-error text-sm">Error: {apiError}</p>
+                    </div>
+                  )}
 
-                {isLoading && schedules.length === 0 && (
-                  <div className="flex justify-center items-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-text-default"></div>
-                  </div>
-                )}
+                  {isLoading && schedules.length === 0 && (
+                    <div className="flex justify-center items-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-text-default"></div>
+                    </div>
+                  )}
 
-                {!isLoading && !apiError && schedules.length === 0 && (
-                  <div className="flex flex-col pt-4 pb-12">
-                    <CircleDotDashed className="h-5 w-5 text-text-muted mb-3.5" />
-                    <p className="text-base text-text-muted font-light mb-2">No schedules yet</p>
-                  </div>
-                )}
+                  {!isLoading && !apiError && schedules.length === 0 && (
+                    <div className="flex flex-col pt-4 pb-12">
+                      <CircleDotDashed className="h-5 w-5 text-text-muted mb-3.5" />
+                      <p className="text-base text-text-muted font-light mb-2">No schedules yet</p>
+                    </div>
+                  )}
 
-                {!isLoading && schedules.length > 0 && (
-                  <div className="space-y-2 pb-8">
-                    {schedules.map((job) => (
-                      <ScheduleCard
-                        key={job.id}
-                        job={job}
-                        onNavigateToDetail={handleNavigateToScheduleDetail}
-                        onEdit={handleOpenEditModal}
-                        onPause={handlePauseSchedule}
-                        onUnpause={handleUnpauseSchedule}
-                        onKill={handleKillRunningJob}
-                        onInspect={handleInspectRunningJob}
-                        onDelete={handleDeleteSchedule}
-                        isPausing={pausingScheduleIds.has(job.id)}
-                        isDeleting={deletingScheduleIds.has(job.id)}
-                        isKilling={killingScheduleIds.has(job.id)}
-                        isInspecting={inspectingScheduleIds.has(job.id)}
-                        isSubmitting={isSubmitting}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+                  {!isLoading && schedules.length > 0 && (
+                    <div className="space-y-2 pb-8">
+                      {schedules.map((job) => (
+                        <ScheduleCard
+                          key={job.id}
+                          job={job}
+                          onNavigateToDetail={handleNavigateToScheduleDetail}
+                          onEdit={handleOpenEditModal}
+                          onPause={handlePauseSchedule}
+                          onUnpause={handleUnpauseSchedule}
+                          onKill={handleKillRunningJob}
+                          onInspect={handleInspectRunningJob}
+                          onDelete={handleDeleteSchedule}
+                          isPausing={pausingScheduleIds.has(job.id)}
+                          isDeleting={deletingScheduleIds.has(job.id)}
+                          isKilling={killingScheduleIds.has(job.id)}
+                          isInspecting={inspectingScheduleIds.has(job.id)}
+                          isSubmitting={isSubmitting}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
         </div>
       </MainPanelLayout>

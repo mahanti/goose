@@ -134,7 +134,7 @@ export function SessionInsights() {
       {/* Header container with rounded bottom */}
       <div className="bg-background-default rounded-b-2xl mb-0.5">
         <div className="px-8 pb-12 pt-19 space-y-4">
-          <div className="origin-bottom-left goose-icon-animation">
+          <div className="origin-bottom-left spring-enter goose-spring-enter">
             <Goose className="size-8" />
           </div>
           <Greeting />
@@ -237,7 +237,7 @@ export function SessionInsights() {
       {/* Header container with rounded bottom */}
       <div className="bg-background-default rounded-b-2xl mb-0.5">
         <div className="px-8 pb-12 pt-19 space-y-4">
-          <div className="origin-bottom-left goose-icon-animation">
+          <div className="origin-bottom-left spring-enter goose-spring-enter">
             <Goose className="size-8" />
           </div>
           <Greeting />
@@ -262,7 +262,7 @@ export function SessionInsights() {
         <div className="grid grid-cols-2 gap-0.5">
           {/* Total Sessions Card */}
           <Card className="w-full py-6 px-6 border-none rounded-2xl bg-background-default">
-            <CardContent className="page-transition flex flex-col justify-end h-full p-0">
+            <CardContent className="spring-enter page-spring-enter flex flex-col justify-end h-full p-0">
               <div className="flex flex-col justify-end">
                 <p className="text-4xl font-mono font-light flex items-end">
                   {Math.max(insights?.totalSessions ?? 0, 0)}
@@ -274,7 +274,7 @@ export function SessionInsights() {
 
           {/* Average Duration Card */}
           {/*<Card className="w-full py-6 px-6 border-none rounded-2xl bg-background-default">*/}
-          {/*  <CardContent className="page-transition flex flex-col justify-end h-full p-0">*/}
+          {/*  <CardContent className="spring-enter page-spring-enter flex flex-col justify-end h-full p-0">*/}
           {/*    <div className="flex flex-col justify-end">*/}
           {/*      <p className="text-4xl font-mono font-light flex items-end">*/}
           {/*        {insights?.avgSessionDuration*/}
@@ -288,7 +288,7 @@ export function SessionInsights() {
 
           {/* Total Tokens Card */}
           <Card className="w-full py-6 px-6 border-none rounded-2xl bg-background-default">
-            <CardContent className="page-transition flex flex-col justify-end h-full p-0">
+            <CardContent className="spring-enter page-spring-enter flex flex-col justify-end h-full p-0">
               <div className="flex flex-col justify-end">
                 <p className="text-4xl font-mono font-light flex items-end">
                   {insights?.totalTokens && insights.totalTokens > 0
@@ -305,7 +305,7 @@ export function SessionInsights() {
         <div className="grid grid-cols-1 gap-0.5">
           {/* Recent Chats Card */}
           <Card className="w-full py-6 px-6 border-none rounded-2xl bg-background-default">
-            <CardContent className="page-transition p-0">
+            <CardContent className="spring-enter page-spring-enter p-0">
               <div className="flex justify-between items-center mb-4">
                 <CardDescription className="mb-0">
                   <span className="text-lg text-text-default">Recent chats</span>
@@ -319,7 +319,7 @@ export function SessionInsights() {
                   See all
                 </Button>
               </div>
-              <div className="space-y-1 min-h-[96px] transition-all duration-300 ease-in-out">
+              <div className="space-y-1 min-h-[96px] transition-spring ease-in-out">
                 {isLoadingSessions ? (
                   // Show skeleton while sessions are loading
                   <>

@@ -1,7 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '../../ui/button';
-import { Plus } from 'lucide-react';
-import { GPSIcon } from '../../ui/icons';
 import { useConfig, FixedExtensionEntry } from '../../ConfigContext';
 import ExtensionList from './subcomponents/ExtensionList';
 import ExtensionModal from './modal/ExtensionModal';
@@ -188,75 +186,88 @@ export default function ExtensionsSection({
 
   return (
     <section id="extensions">
-      <div className="">
-        <ExtensionList
-          extensions={extensions}
-          onToggle={handleExtensionToggle}
-          onConfigure={handleConfigureClick}
-          disableConfiguration={disableConfiguration}
-        />
-
-        {!hideButtons && (
-          <div className="flex gap-4 pt-4 w-full">
-            <Button
-              className="flex items-center gap-2 justify-center"
-              variant="default"
-              onClick={() => setIsAddModalOpen(true)}
-            >
-              <Plus className="h-4 w-4" />
-              Add custom extension
-            </Button>
-            <Button
-              className="flex items-center gap-2 justify-center"
-              variant="secondary"
-              onClick={() => window.open('https://block.github.io/goose/v1/extensions/', '_blank')}
-            >
-              <GPSIcon size={12} />
-              Browse extensions
-            </Button>
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="bg-background-default px-8 pb-8 pt-8">
+          <div className="flex flex-col page-transition">
+            <div className="flex justify-between items-center mb-1">
+              <h1 className="text-4xl font-light">Extensions</h1>
+              {!hideButtons && (
+                <div className="flex gap-2">
+                  <Button
+                    className="rounded-full px-4"
+                    variant="default"
+                    onClick={() => setIsAddModalOpen(true)}
+                  >
+                    Add custom extension
+                  </Button>
+                  <Button
+                    className="rounded-full px-4"
+                    variant="secondary"
+                    onClick={() =>
+                      window.open('https://block.github.io/goose/v1/extensions/', '_blank')
+                    }
+                  >
+                    Browse extensions
+                  </Button>
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-text-muted mb-1">
+              View and manage your extensions to enhance Goose with additional tools and
+              capabilities.
+            </p>
           </div>
-        )}
+        </div>
 
-        {/* Modal for updating an existing extension */}
-        {isModalOpen && selectedExtension && (
-          <ExtensionModal
-            title="Update Extension"
-            initialData={extensionToFormData(selectedExtension)}
-            onClose={handleModalClose}
-            onSubmit={handleUpdateExtension}
-            onDelete={handleDeleteExtension}
-            submitLabel="Save Changes"
-            modalType={'edit'}
+        <div className="flex-1 min-h-0 overflow-y-auto px-8">
+          <ExtensionList
+            extensions={extensions}
+            onToggle={handleExtensionToggle}
+            onConfigure={handleConfigureClick}
+            disableConfiguration={disableConfiguration}
           />
-        )}
-
-        {/* Modal for adding a new extension */}
-        {isAddModalOpen && (
-          <ExtensionModal
-            title="Add custom extension"
-            initialData={getDefaultFormData()}
-            onClose={handleModalClose}
-            onSubmit={handleAddExtension}
-            submitLabel="Add Extension"
-            modalType={'add'}
-          />
-        )}
-
-        {/* Modal for adding extension from deeplink*/}
-        {deepLinkConfigStateVar && showEnvVarsStateVar && (
-          <ExtensionModal
-            title="Add custom extension"
-            initialData={extensionToFormData({
-              ...deepLinkConfig,
-              enabled: true,
-            } as FixedExtensionEntry)}
-            onClose={handleModalClose}
-            onSubmit={handleAddExtension}
-            submitLabel="Add Extension"
-            modalType={'add'}
-          />
-        )}
+        </div>
       </div>
+
+      {/* Modal for updating an existing extension */}
+      {isModalOpen && selectedExtension && (
+        <ExtensionModal
+          title="Update Extension"
+          initialData={extensionToFormData(selectedExtension)}
+          onClose={handleModalClose}
+          onSubmit={handleUpdateExtension}
+          onDelete={handleDeleteExtension}
+          submitLabel="Save Changes"
+          modalType={'edit'}
+        />
+      )}
+
+      {/* Modal for adding a new extension */}
+      {isAddModalOpen && (
+        <ExtensionModal
+          title="Add custom extension"
+          initialData={getDefaultFormData()}
+          onClose={handleModalClose}
+          onSubmit={handleAddExtension}
+          submitLabel="Add Extension"
+          modalType={'add'}
+        />
+      )}
+
+      {/* Modal for adding extension from deeplink*/}
+      {deepLinkConfigStateVar && showEnvVarsStateVar && (
+        <ExtensionModal
+          title="Add custom extension"
+          initialData={extensionToFormData({
+            ...deepLinkConfig,
+            enabled: true,
+          } as FixedExtensionEntry)}
+          onClose={handleModalClose}
+          onSubmit={handleAddExtension}
+          submitLabel="Add Extension"
+          modalType={'add'}
+        />
+      )}
     </section>
   );
 }

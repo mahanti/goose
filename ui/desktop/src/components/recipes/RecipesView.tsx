@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { listSavedRecipes, convertToLocaleDateString } from '../../recipe/recipeStorage';
-import { FileText, Trash2, Bot, Calendar, AlertCircle } from 'lucide-react';
+import { Calendar, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -177,9 +177,8 @@ export default function RecipesView() {
               handleLoadRecipe(recipe);
             }}
             size="sm"
-            className="h-8"
+            className="h-8 rounded-full px-4"
           >
-            <Bot className="w-4 h-4 mr-1" />
             Use
           </Button>
           <Button
@@ -189,9 +188,8 @@ export default function RecipesView() {
             }}
             variant="outline"
             size="sm"
-            className="h-8"
+            className="h-8 rounded-full px-4"
           >
-            <FileText className="w-4 h-4 mr-1" />
             Preview
           </Button>
           <Button
@@ -201,9 +199,9 @@ export default function RecipesView() {
             }}
             variant="ghost"
             size="sm"
-            className="h-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="h-8 rounded-full px-4 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
-            <Trash2 className="w-4 h-4" />
+            Delete
           </Button>
         </div>
       </div>
@@ -250,7 +248,7 @@ export default function RecipesView() {
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
           <p className="text-lg mb-2">Error Loading Recipes</p>
           <p className="text-sm text-center mb-4">{error}</p>
-          <Button onClick={loadSavedRecipes} variant="default">
+          <Button onClick={loadSavedRecipes} variant="default" className="rounded-full px-6">
             Try Again
           </Button>
         </div>
@@ -281,33 +279,35 @@ export default function RecipesView() {
   return (
     <>
       <MainPanelLayout>
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="bg-background-default px-8 pb-8 pt-16">
-            <div className="flex flex-col page-transition">
-              <div className="flex justify-between items-center mb-1">
-                <h1 className="text-4xl font-light">Recipes</h1>
-                <div className="flex gap-2">
-                  <CreateRecipeButton onClick={() => setShowCreateDialog(true)} />
-                  <ImportRecipeButton onClick={() => setShowImportDialog(true)} />
+        <div className="w-full max-w-[720px] mx-auto">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="bg-background-default px-8 pb-8 pt-16">
+              <div className="flex flex-col page-transition">
+                <div className="flex justify-between items-center mb-1">
+                  <h1 className="text-4xl font-light">Recipes</h1>
+                  <div className="flex gap-2">
+                    <CreateRecipeButton onClick={() => setShowCreateDialog(true)} />
+                    <ImportRecipeButton onClick={() => setShowImportDialog(true)} />
+                  </div>
                 </div>
+                <p className="text-sm text-text-muted mb-1">
+                  View and manage your saved recipes to quickly start new sessions with predefined
+                  configurations.
+                </p>
               </div>
-              <p className="text-sm text-text-muted mb-1">
-                View and manage your saved recipes to quickly start new sessions with predefined
-                configurations.
-              </p>
             </div>
-          </div>
 
-          <div className="flex-1 min-h-0 relative px-8">
-            <ScrollArea className="h-full">
-              <div
-                className={`h-full relative transition-all duration-300 ${
-                  showContent ? 'opacity-100 animate-in fade-in ' : 'opacity-0'
-                }`}
-              >
-                {renderContent()}
-              </div>
-            </ScrollArea>
+            <div className="flex-1 min-h-0 relative px-8">
+              <ScrollArea className="h-full">
+                <div
+                  className={`h-full relative transition-all duration-300 ${
+                    showContent ? 'opacity-100 animate-in fade-in ' : 'opacity-0'
+                  }`}
+                >
+                  {renderContent()}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
         </div>
       </MainPanelLayout>
@@ -358,7 +358,7 @@ export default function RecipesView() {
                       }}
                       variant="ghost"
                       size="sm"
-                      className="ml-4 p-2 hover:bg-background-default rounded-lg transition-colors flex items-center"
+                      className="ml-4 px-4 rounded-full hover:bg-background-default transition-colors"
                     >
                       <span className="text-sm text-text-muted">Copy</span>
                     </Button>
@@ -693,7 +693,11 @@ export default function RecipesView() {
             </div>
 
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border-subtle">
-              <Button onClick={() => setShowPreview(false)} variant="ghost">
+              <Button
+                onClick={() => setShowPreview(false)}
+                variant="ghost"
+                className="rounded-full px-6"
+              >
                 Close
               </Button>
               <Button
@@ -702,6 +706,7 @@ export default function RecipesView() {
                   handleLoadRecipe(selectedRecipe.recipe);
                 }}
                 variant="default"
+                className="rounded-full px-6"
               >
                 Load Recipe
               </Button>

@@ -12,7 +12,7 @@ import { openSharedSessionFromDeepLink } from './sessionLinks';
 import { type SharedSessionDetails } from './sharedSessions';
 import { ErrorUI } from './components/ErrorBoundary';
 import { ExtensionInstallModal } from './components/ExtensionInstallModal';
-import { ToastContainer } from 'react-toastify';
+import { ToastProvider } from './components/ui/custom-toast';
 import { GoosehintsModal } from './components/GoosehintsModal';
 import AnnouncementModal from './components/AnnouncementModal';
 import { generateSessionId } from './sessions';
@@ -24,19 +24,15 @@ import Pair, { PairRouteState } from './components/pair';
 import SettingsView, { SettingsViewOptions } from './components/settings/SettingsView';
 import SessionsView from './components/sessions/SessionsView';
 import SharedSessionView from './components/sessions/SharedSessionView';
-import SchedulesView from './components/schedule/SchedulesView';
 import ProviderSettings from './components/settings/providers/ProviderSettingsPage';
 import { AppLayout } from './components/Layout/AppLayout';
 import { ChatProvider } from './contexts/ChatContext';
 import { DraftProvider } from './contexts/DraftContext';
 
-import 'react-toastify/dist/ReactToastify.css';
 import { useConfig } from './components/ConfigContext';
 import { ModelAndProviderProvider } from './components/ModelAndProviderContext';
 import PermissionSettingsView from './components/settings/permission/PermissionSetting';
 
-import ExtensionsView, { ExtensionsViewOptions } from './components/extensions/ExtensionsView';
-import RecipesView from './components/recipes/RecipesView';
 import RecipeEditor from './components/recipes/RecipeEditor';
 import { createNavigationHandler, View, ViewOptions } from './utils/navigationUtils';
 import {
@@ -49,11 +45,9 @@ import {
 // Route Components
 const HubRouteWrapper = ({
   setIsGoosehintsModalOpen,
-  isExtensionsLoading,
   resetChat,
 }: {
   setIsGoosehintsModalOpen: (isOpen: boolean) => void;
-  isExtensionsLoading: boolean;
   resetChat: () => void;
 }) => {
   const navigate = useNavigate();
@@ -63,7 +57,6 @@ const HubRouteWrapper = ({
     <Hub
       setView={setView}
       setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
-      isExtensionsLoading={isExtensionsLoading}
       resetChat={resetChat}
     />
   );
@@ -89,12 +82,35 @@ const PairRouteWrapper = ({
   const location = useLocation();
   const navigate = useNavigate();
   const setView = useMemo(() => createNavigationHandler(navigate), [navigate]);
-  const routeState =
-    (location.state as PairRouteState) || (window.history.state as PairRouteState) || {};
+  const routeState = useMemo(
+    () => (location.state as PairRouteState) || (window.history.state as PairRouteState) || {},
+    [location.state]
+  );
   const [searchParams] = useSearchParams();
   const [initialMessage] = useState(routeState.initialMessage);
 
-  const resumeSessionId = searchParams.get('resumeSessionId') ?? undefined;
+  // Check for sessionId from both search params and navigation state
+  const resumeSessionId =
+    searchParams.get('resumeSessionId') ?? routeState.resumeSessionId ?? undefined;
+
+  // Debug logging
+  useEffect(() => {
+    if (routeState.resumeSessionId) {
+      console.log('PairRouteWrapper: Found sessionId in state:', routeState.resumeSessionId);
+    }
+    if (resumeSessionId) {
+      console.log('PairRouteWrapper: Using resumeSessionId:', resumeSessionId);
+    }
+  }, [routeState, resumeSessionId]);
+
+  // Clear navigation state after extracting sessionId to prevent reloading
+  useEffect(() => {
+    if (routeState.resumeSessionId && location.state) {
+      console.log('PairRouteWrapper: Clearing navigation state to prevent reloading');
+      // Clear the navigation state but keep the sessionId in search params for consistency
+      window.history.replaceState({}, document.title);
+    }
+  }, [routeState, location.state]);
 
   return (
     <Pair
@@ -115,11 +131,20 @@ const PairRouteWrapper = ({
 const SettingsRoute = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const setView = useMemo(() => createNavigationHandler(navigate), [navigate]);
 
-  // Get viewOptions from location.state or history.state
-  const viewOptions =
+  // Get viewOptions from location.state, history.state, or URL search params
+  const baseViewOptions =
     (location.state as SettingsViewOptions) || (window.history.state as SettingsViewOptions) || {};
+
+  // Check for tab parameter in URL search params
+  const tabFromUrl = searchParams.get('tab');
+  const viewOptions = {
+    ...baseViewOptions,
+    tab: tabFromUrl || baseViewOptions.tab,
+  };
+
   return <SettingsView onClose={() => navigate('/')} setView={setView} viewOptions={viewOptions} />;
 };
 
@@ -130,13 +155,36 @@ const SessionsRoute = () => {
   return <SessionsView setView={setView} />;
 };
 
+// Redirect routes for legacy URLs
 const SchedulesRoute = () => {
   const navigate = useNavigate();
-  return <SchedulesView onClose={() => navigate('/')} />;
+  useEffect(() => {
+    navigate('/settings?tab=schedules', { replace: true });
+  }, [navigate]);
+  return null;
 };
 
 const RecipesRoute = () => {
-  return <RecipesView />;
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate('/settings?tab=recipes', { replace: true });
+  }, [navigate]);
+  return null;
+};
+
+const LegacyExtensionsRoute = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Preserve any existing state when redirecting
+    const viewOptions = (location.state as SettingsViewOptions) || {};
+    navigate('/settings?tab=extensions', {
+      replace: true,
+      state: { ...viewOptions, tab: 'extensions' },
+    });
+  }, [navigate, location.state]);
+  return null;
 };
 
 const RecipeEditorRoute = () => {
@@ -273,46 +321,12 @@ const SharedSessionRouteWrapper = ({
   );
 };
 
-const ExtensionsRoute = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Get viewOptions from location.state or history.state (for deep link extensions)
-  const viewOptions =
-    (location.state as ExtensionsViewOptions) ||
-    (window.history.state as ExtensionsViewOptions) ||
-    {};
-
-  return (
-    <ExtensionsView
-      onClose={() => navigate(-1)}
-      setView={(view, options) => {
-        switch (view) {
-          case 'chat':
-            navigate('/');
-            break;
-          case 'pair':
-            navigate('/pair', { state: options });
-            break;
-          case 'settings':
-            navigate('/settings', { state: options });
-            break;
-          default:
-            navigate('/');
-        }
-      }}
-      viewOptions={viewOptions}
-    />
-  );
-};
-
 export function AppInner() {
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [isGoosehintsModalOpen, setIsGoosehintsModalOpen] = useState(false);
   const [agentWaitingMessage, setAgentWaitingMessage] = useState<string | null>(null);
   const [isLoadingSharedSession, setIsLoadingSharedSession] = useState(false);
   const [sharedSessionError, setSharedSessionError] = useState<string | null>(null);
-  const [isExtensionsLoading, setIsExtensionsLoading] = useState(false);
   const [didSelectProvider, setDidSelectProvider] = useState<boolean>(false);
 
   const navigate = useNavigate();
@@ -360,7 +374,6 @@ export function AppInner() {
         try {
           await loadCurrentChat({
             setAgentWaitingMessage,
-            setIsExtensionsLoading,
           });
         } catch (e) {
           if (e instanceof NoProviderOrModelError) {
@@ -519,21 +532,6 @@ export function AppInner() {
 
   return (
     <>
-      <ToastContainer
-        aria-label="Toast notifications"
-        toastClassName={() =>
-          `relative min-h-16 mb-4 p-2 rounded-lg
-               flex justify-between overflow-hidden cursor-pointer
-               text-text-on-accent bg-background-inverse
-              `
-        }
-        style={{ width: '380px' }}
-        className="mt-6"
-        position="top-right"
-        autoClose={3000}
-        closeOnClick
-        pauseOnHover
-      />
       <ExtensionInstallModal addExtension={addExtension} />
       <div className="relative w-screen h-screen overflow-hidden bg-background-muted flex flex-col">
         <div className="titlebar-drag-region" />
@@ -550,7 +548,7 @@ export function AppInner() {
                 <ChatProvider
                   chat={chat}
                   setChat={setChat}
-                  contextKey="hub"
+                  contextKey="chat"
                   agentWaitingMessage={agentWaitingMessage}
                 >
                   <AppLayout setIsGoosehintsModalOpen={setIsGoosehintsModalOpen} />
@@ -563,7 +561,6 @@ export function AppInner() {
               element={
                 <HubRouteWrapper
                   setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
-                  isExtensionsLoading={isExtensionsLoading}
                   resetChat={resetChatIfNecessary}
                 />
               }
@@ -582,8 +579,17 @@ export function AppInner() {
                 />
               }
             />
+            <Route
+              path="hub"
+              element={
+                <HubRouteWrapper
+                  setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
+                  resetChat={resetChatIfNecessary}
+                />
+              }
+            />
             <Route path="settings" element={<SettingsRoute />} />
-            <Route path="extensions" element={<ExtensionsRoute />} />
+            <Route path="extensions" element={<LegacyExtensionsRoute />} />
             <Route path="sessions" element={<SessionsRoute />} />
             <Route path="schedules" element={<SchedulesRoute />} />
             <Route path="recipes" element={<RecipesRoute />} />
@@ -616,10 +622,12 @@ export default function App() {
   return (
     <DraftProvider>
       <ModelAndProviderProvider>
-        <HashRouter>
-          <AppInner />
-        </HashRouter>
-        <AnnouncementModal />
+        <ToastProvider>
+          <HashRouter>
+            <AppInner />
+          </HashRouter>
+          <AnnouncementModal />
+        </ToastProvider>
       </ModelAndProviderProvider>
     </DraftProvider>
   );

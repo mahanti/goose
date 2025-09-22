@@ -6,7 +6,7 @@ import { extractUrls } from '../utils/urlUtils';
 import { extractImagePaths, removeImagePathsFromText } from '../utils/imageUtils';
 import { formatMessageTimestamp } from '../utils/timeUtils';
 import MarkdownContent from './MarkdownContent';
-import ToolCallWithResponse from './ToolCallWithResponse';
+import GooseToolDisplay from './GooseToolDisplay';
 import ToolCallChain from './ToolCallChain';
 import {
   identifyConsecutiveToolCalls,
@@ -210,7 +210,7 @@ export default function GooseMessage({
   const isFirstInChain = messageChain && messageChain[0] === messageIndex;
 
   return (
-    <div className="goose-message flex w-[90%] justify-start min-w-0">
+    <div className="goose-message flex w-[100%] justify-start min-w-0">
       <div className="flex flex-col w-full min-w-0">
         {cotText && (
           <details className="bg-bgSubtle border border-borderSubtle rounded p-2 mb-2">
@@ -225,8 +225,12 @@ export default function GooseMessage({
 
         {displayText && (
           <div className="flex flex-col group">
-            <div ref={contentRef} className="w-full">
-              <MarkdownContent content={displayText} />
+            <div className="max-w-[95%] w-fit">
+              <div className="bg-background-muted rounded-3xl py-2.5 px-4">
+                <div ref={contentRef} className="w-full">
+                  <MarkdownContent content={displayText} />
+                </div>
+              </div>
             </div>
 
             {/* Image previews */}
@@ -239,7 +243,7 @@ export default function GooseMessage({
             )}
 
             {toolRequests.length === 0 && (
-              <div className="relative flex justify-start">
+              <div className="relative flex justify-start mt-1">
                 {!isStreaming && (
                   <div className="text-xs font-mono text-text-muted pt-1 transition-all duration-200 group-hover:-translate-y-4 group-hover:opacity-0">
                     {timestamp}
@@ -271,7 +275,7 @@ export default function GooseMessage({
                 <div className="flex flex-col gap-3">
                   {toolRequests.map((toolRequest) => (
                     <div className="goose-message-tool" key={toolRequest.id}>
-                      <ToolCallWithResponse
+                      <GooseToolDisplay
                         isCancelledMessage={
                           messageIndex < messageHistoryIndex &&
                           toolResponsesMap.get(toolRequest.id) == undefined
@@ -280,7 +284,6 @@ export default function GooseMessage({
                         toolResponse={toolResponsesMap.get(toolRequest.id)}
                         notifications={toolCallNotifications.get(toolRequest.id)}
                         isStreamingMessage={isStreaming}
-                        append={append}
                       />
                     </div>
                   ))}

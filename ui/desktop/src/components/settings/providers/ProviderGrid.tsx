@@ -143,7 +143,7 @@ const ProviderCards = memo(function ProviderCards({
       {providerCards}
 
       <Dialog open={showCustomProviderModal} onOpenChange={setShowCustomProviderModal}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[720px]">
           <DialogHeader>
             <DialogTitle>Add Custom Provider</DialogTitle>
           </DialogHeader>

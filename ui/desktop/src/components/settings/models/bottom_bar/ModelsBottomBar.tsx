@@ -1,5 +1,5 @@
 import { Sliders, ChefHat, Bot, Eye, Save } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useModelAndProvider } from '../../../ModelAndProviderContext';
 import { SwitchModelModal } from '../subcomponents/SwitchModelModal';
 import { LeadWorkerSettings } from '../subcomponents/LeadWorkerSettings';
@@ -34,7 +34,7 @@ export default function ModelsBottomBar({
   sessionId,
   dropdownRef,
   setView,
-  alerts,
+  alerts: _alerts,
   recipeConfig,
   hasMessages = false,
 }: ModelsBottomBarProps) {
@@ -63,6 +63,10 @@ export default function ModelsBottomBar({
   // View recipe modal state
   const [showViewRecipeModal, setShowViewRecipeModal] = useState(false);
 
+  // Dropdown state for coordination
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownId = useRef('models-dropdown');
+
   // Check if lead/worker mode is active
   useEffect(() => {
     const checkLeadWorker = async () => {
@@ -76,6 +80,23 @@ export default function ModelsBottomBar({
     };
     checkLeadWorker();
   }, [read]);
+
+  // Listen for global dropdown close events
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleCloseAllDropdowns = (event: any) => {
+      // Don't close this dropdown if it was the one that sent the event
+      if (event.detail?.senderId !== dropdownId.current && isDropdownOpen) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    window.addEventListener('close-all-dropdowns', handleCloseAllDropdowns);
+
+    return () => {
+      window.removeEventListener('close-all-dropdowns', handleCloseAllDropdowns);
+    };
+  }, [isDropdownOpen]);
 
   // Refresh lead/worker status when modal closes
   const handleLeadWorkerModalClose = () => {
@@ -226,9 +247,22 @@ export default function ModelsBottomBar({
 
   return (
     <div className="relative flex items-center" ref={dropdownRef}>
-      <BottomMenuAlertPopover alerts={alerts} />
-      <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center hover:cursor-pointer max-w-[180px] md:max-w-[200px] lg:max-w-[380px] min-w-0 text-text-default/70 hover:text-text-default transition-colors">
+      <BottomMenuAlertPopover alerts={_alerts} />
+      <DropdownMenu
+        open={isDropdownOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            // Close all other dropdowns when this one opens
+            window.dispatchEvent(
+              new CustomEvent('close-all-dropdowns', {
+                detail: { senderId: dropdownId.current },
+              })
+            );
+          }
+          setIsDropdownOpen(open);
+        }}
+      >
+        <DropdownMenuTrigger className="flex items-center hover:cursor-pointer max-w-[180px] md:max-w-[200px] lg:max-w-[380px] min-w-0 text-text-default/70 hover:text-text-default transition-colors rounded-full border border-border-default hover:bg-background-muted px-2 py-1 h-7">
           <div className="flex items-center truncate max-w-[130px] md:max-w-[200px] lg:max-w-[360px] min-w-0">
             <Bot className="mr-1 h-4 w-4 flex-shrink-0" />
             <span className="truncate text-xs">
@@ -239,7 +273,7 @@ export default function ModelsBottomBar({
             </span>
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="center" className="w-64 text-sm">
+        <DropdownMenuContent side="top" align="center" className="w-64 text-sm p-6 rounded-2xl">
           <h6 className="text-xs text-textProminent mt-2 ml-2">Current model</h6>
           <p className="flex items-center justify-between text-sm mx-2 pb-2 border-b mb-2">
             {displayModelName}

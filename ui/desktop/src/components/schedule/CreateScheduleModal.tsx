@@ -1,13 +1,20 @@
 import React, { useState, useEffect, FormEvent, useCallback } from 'react';
-import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select } from '../ui/Select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import cronstrue from 'cronstrue';
 import * as yaml from 'yaml';
 import { Recipe, decodeRecipe } from '../../recipe';
 import { getStorageDirectory } from '../../recipe/recipeStorage';
-import ClockIcon from '../../assets/clock-icon.svg';
+import { Clock } from 'lucide-react';
 
 type FrequencyValue = 'once' | 'every' | 'daily' | 'weekly' | 'monthly';
 
@@ -556,27 +563,21 @@ export const CreateScheduleModal: React.FC<CreateScheduleModalProps> = ({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-background-default shadow-xl rounded-3xl z-50 flex flex-col max-h-[90vh] overflow-hidden">
-        <div className="px-8 pt-8 pb-4 flex-shrink-0 text-center">
-          <div className="flex flex-col items-center">
-            <img src={ClockIcon} alt="Clock" className="w-11 h-11 mb-2" />
-            <h2 className="text-base font-semibold text-text-prominent">Create New Schedule</h2>
-            <p className="text-base text-text-subtle mt-2 max-w-sm">
-              Create a new schedule using the settings below to do things like automatically run
-              tasks or create files
-            </p>
-          </div>
-        </div>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Clock className="text-iconStandard" size={24} />
+            Create New Schedule
+          </DialogTitle>
+          <DialogDescription>
+            Create a new schedule using the settings below to automatically run tasks or create
+            files.
+          </DialogDescription>
+        </DialogHeader>
 
-        <form
-          id="new-schedule-form"
-          onSubmit={handleLocalSubmit}
-          className="px-8 py-4 space-y-4 flex-grow overflow-y-auto"
-        >
+        <form id="new-schedule-form" onSubmit={handleLocalSubmit} className="py-4 space-y-4">
           {apiErrorExternally && (
             <p className="text-text-error text-sm mb-3 p-2 bg-background-error border border-border-error rounded-md">
               {apiErrorExternally}
@@ -636,7 +637,7 @@ export const CreateScheduleModal: React.FC<CreateScheduleModalProps> = ({
                     type="button"
                     variant="outline"
                     onClick={handleBrowseFile}
-                    className="w-full justify-center rounded-full"
+                    className="w-full justify-center rounded-full px-6"
                   >
                     Browse for YAML file...
                   </Button>
@@ -884,28 +885,26 @@ export const CreateScheduleModal: React.FC<CreateScheduleModalProps> = ({
           </div>
         </form>
 
-        {/* Actions */}
-        <div className="mt-[8px] ml-[-24px] mr-[-24px] pt-[16px]">
+        <DialogFooter className="pt-2">
           <Button
-            type="submit"
-            form="new-schedule-form"
-            variant="ghost"
-            disabled={isLoadingExternally}
-            className="w-full h-[60px] rounded-none border-t text-gray-900 dark:text-white hover:bg-gray-50 dark:border-gray-600 text-lg font-medium"
-          >
-            {isLoadingExternally ? 'Creating...' : 'Create Schedule'}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
+            variant="outline"
             onClick={handleClose}
             disabled={isLoadingExternally}
-            className="w-full h-[60px] rounded-none border-t text-gray-400 hover:bg-gray-50 dark:border-gray-600 text-lg font-regular"
+            className="rounded-full px-6"
           >
             Cancel
           </Button>
-        </div>
-      </Card>
-    </div>
+          <Button
+            type="submit"
+            form="new-schedule-form"
+            disabled={isLoadingExternally}
+            variant="default"
+            className="rounded-full px-6"
+          >
+            {isLoadingExternally ? 'Creating...' : 'Create Schedule'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

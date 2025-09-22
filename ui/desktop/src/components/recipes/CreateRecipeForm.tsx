@@ -3,6 +3,14 @@ import { useForm } from '@tanstack/react-form';
 import { z } from 'zod';
 import { FileText } from 'lucide-react';
 import { Button } from '../ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Recipe } from '../../recipe';
 import { saveRecipe } from '../../recipe/recipeStorage';
 import { toastSuccess, toastError } from '../../toasts';
@@ -174,12 +182,18 @@ Parameters you can use:
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50">
-      <div className="bg-background-default border border-border-subtle rounded-lg p-6 w-[700px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-medium text-text-standard mb-4">Create New Recipe</h3>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="text-iconStandard" size={24} />
+            Create New Recipe
+          </DialogTitle>
+          <DialogDescription>
+            Create a new recipe with custom instructions and parameters.
+          </DialogDescription>
+        </DialogHeader>
 
         <form
           onSubmit={(e) => {
@@ -187,6 +201,7 @@ Parameters you can use:
             e.stopPropagation();
             createRecipeForm.handleSubmit();
           }}
+          className="py-4"
         >
           <div className="space-y-4">
             <createRecipeForm.Field name="title">
@@ -434,41 +449,47 @@ Parameters you can use:
               )}
             </createRecipeForm.Field>
           </div>
-
-          <div className="flex justify-end space-x-3 mt-6">
-            <Button type="button" onClick={handleClose} variant="ghost" disabled={creating}>
-              Cancel
-            </Button>
-            <createRecipeForm.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting, state.isValid]}
-            >
-              {([canSubmit, isSubmitting, isValid]) => {
-                // Debug logging to see what's happening
-                console.log('Form state:', { canSubmit, isSubmitting, isValid });
-
-                return (
-                  <Button
-                    type="submit"
-                    disabled={!canSubmit || creating || isSubmitting}
-                    variant="default"
-                  >
-                    {creating || isSubmitting ? 'Creating...' : 'Create Recipe'}
-                  </Button>
-                );
-              }}
-            </createRecipeForm.Subscribe>
-          </div>
         </form>
-      </div>
-    </div>
+
+        <DialogFooter className="pt-2">
+          <Button
+            type="button"
+            onClick={handleClose}
+            variant="outline"
+            disabled={creating}
+            className="rounded-full px-6"
+          >
+            Cancel
+          </Button>
+          <createRecipeForm.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting, state.isValid]}
+          >
+            {([canSubmit, isSubmitting, isValid]) => {
+              // Debug logging to see what's happening
+              console.log('Form state:', { canSubmit, isSubmitting, isValid });
+
+              return (
+                <Button
+                  type="submit"
+                  disabled={!canSubmit || creating || isSubmitting}
+                  variant="default"
+                  className="rounded-full px-6"
+                >
+                  {creating || isSubmitting ? 'Creating...' : 'Create Recipe'}
+                </Button>
+              );
+            }}
+          </createRecipeForm.Subscribe>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // Export the button component for easy access
 export function CreateRecipeButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button onClick={onClick} variant="outline" size="sm" className="flex items-center gap-2">
-      <FileText className="w-4 h-4" />
+    <Button onClick={onClick} variant="outline" size="sm" className="rounded-full px-4">
       Create Recipe
     </Button>
   );

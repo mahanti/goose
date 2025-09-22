@@ -17,7 +17,7 @@ window.addEventListener('error', (event) => {
 export function ErrorUI({ error }: { error: Error }) {
   return (
     <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-center gap-6 bg-background">
-      <div className="flex flex-col items-center gap-4 max-w-[600px] text-center px-6">
+      <div className="flex flex-col items-center gap-4 max-w-[720px] text-center px-6">
         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
           <AlertTriangle className="w-8 h-8 text-destructive" />
         </div>

@@ -107,7 +107,20 @@ const ScrollArea = React.forwardRef<ScrollAreaHandle, ScrollAreaProps>(
         data-scrolled={isScrolled}
         {...props}
       >
-        <div className={cn('absolute top-0 left-0 right-0 z-10 transition-all duration-200')} />
+        {/* Progressive blur overlays */}
+        <div
+          className={cn(
+            'absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background-default/95 via-background-default/50 to-transparent z-10 transition-all duration-300 pointer-events-none backdrop-blur-sm',
+            isScrolled ? 'opacity-100' : 'opacity-0'
+          )}
+        />
+        <div
+          className={cn(
+            'absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background-default/95 via-background-default/50 to-transparent z-10 transition-all duration-300 pointer-events-none backdrop-blur-sm',
+            !isFollowing ? 'opacity-100' : 'opacity-0'
+          )}
+        />
+
         <ScrollAreaPrimitive.Viewport
           ref={viewportRef}
           className="h-full w-full rounded-[inherit] [&>div]:!block"

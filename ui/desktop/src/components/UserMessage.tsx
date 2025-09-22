@@ -198,9 +198,9 @@ export default function UserMessage({ message, onMessageUpdate }: UserMessagePro
         ) : (
           // Normal message display
           <div className="message flex justify-end w-full">
-            <div className="flex-col max-w-[85%] w-fit">
+            <div className="flex-col max-w-[95%] w-fit">
               <div className="flex flex-col group">
-                <div className="flex bg-background-accent text-text-on-accent rounded-xl py-2.5 px-4">
+                <div className="flex bg-background-accent text-text-on-accent rounded-3xl py-2.5 px-4">
                   <div ref={contentRef}>
                     <MarkdownContent
                       content={displayText}

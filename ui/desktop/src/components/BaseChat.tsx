@@ -56,6 +56,8 @@ import { MainPanelLayout } from './Layout/MainPanelLayout';
 import ChatInput from './ChatInput';
 import { ScrollArea, ScrollAreaHandle } from './ui/scroll-area';
 import { RecipeWarningModal } from './ui/RecipeWarningModal';
+import { DirSwitcher } from './bottom_menu/DirSwitcher';
+import { useSidebar } from './ui/sidebar';
 import ParameterInputModal from './ParameterInputModal';
 import { useChatEngine } from '../hooks/useChatEngine';
 import { useRecipeManager } from '../hooks/useRecipeManager';
@@ -111,6 +113,10 @@ function BaseChatContent({
 }: BaseChatProps) {
   const location = useLocation();
   const scrollRef = useRef<ScrollAreaHandle>(null);
+
+  // Get sidebar state for conditional padding when collapsed
+  const { state: sidebarState } = useSidebar();
+  const isSidebarCollapsed = sidebarState === 'collapsed';
 
   const disableAnimation = location.state?.disableAnimation || false;
   const [hasStartedUsingRecipe, setHasStartedUsingRecipe] = React.useState(false);
@@ -340,76 +346,68 @@ function BaseChatContent({
         {renderHeader && renderHeader()}
 
         {/* Chat container with sticky recipe header */}
-        <div className="flex flex-col flex-1 mb-0.5 min-h-0 relative">
+        <div className="flex flex-col flex-1 min-h-0 relative overflow-visible">
+          {/* Directory switcher - positioned absolutely at top left with conditional padding */}
+          <div
+            className={`absolute ${isSidebarCollapsed ? 'top-10' : 'top-4'} left-4 z-50 pointer-events-auto transition-spring`}
+          >
+            <DirSwitcher className="pointer-events-auto" />
+          </div>
+
           <ScrollArea
             ref={scrollRef}
-            className={`flex-1 bg-background-default rounded-b-2xl min-h-0 relative ${contentClassName}`}
+            className={`flex-1 h-full bg-background-default rounded-b-2xl min-h-0 relative ${contentClassName}`}
             autoScroll
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             data-drop-zone="true"
             paddingX={6}
             paddingY={0}
+            style={{ paddingTop: isSidebarCollapsed ? '96px' : '72px' }}
           >
-            {/* Recipe agent header - sticky at top of chat container */}
-            {recipeConfig?.title && (
-              <div className="sticky top-0 z-10 bg-background-default px-0 -mx-6 mb-6 pt-6">
-                <AgentHeader
-                  title={recipeConfig.title}
-                  profileInfo={
-                    recipeConfig.profile
-                      ? `${recipeConfig.profile} - ${recipeConfig.mcps || 12} MCPs`
-                      : undefined
-                  }
-                  onChangeProfile={() => {
-                    console.log('Change profile clicked');
-                  }}
-                  showBorder={true}
-                />
-              </div>
-            )}
+            <div className="max-w-[720px] mx-auto pb-40">
+              {/* Recipe agent header - sticky at top of chat container */}
+              {recipeConfig?.title && (
+                <div className="sticky top-0 z-10 bg-background-default px-0 -mx-6 mb-6 pt-6">
+                  <AgentHeader
+                    title={recipeConfig.title}
+                    profileInfo={
+                      recipeConfig.profile
+                        ? `${recipeConfig.profile} - ${recipeConfig.mcps || 12} MCPs`
+                        : undefined
+                    }
+                    onChangeProfile={() => {
+                      console.log('Change profile clicked');
+                    }}
+                    showBorder={true}
+                  />
+                </div>
+              )}
 
-            {/* Custom content before messages */}
-            {renderBeforeMessages && renderBeforeMessages()}
+              {/* Custom content before messages */}
+              {renderBeforeMessages && renderBeforeMessages()}
 
-            {/* Recipe Activities - always show when recipe is active and accepted */}
-            {recipeConfig && recipeAccepted && !suppressEmptyState && (
-              <div className={hasStartedUsingRecipe ? 'mb-6' : ''}>
-                <RecipeActivities
-                  append={(text: string) => appendWithTracking(text)}
-                  activities={
-                    Array.isArray(recipeConfig.activities) ? recipeConfig.activities : null
-                  }
-                  title={recipeConfig.title}
-                  parameterValues={recipeParameters || {}}
-                />
-              </div>
-            )}
+              {/* Recipe Activities - always show when recipe is active and accepted */}
+              {recipeConfig && recipeAccepted && !suppressEmptyState && (
+                <div className={hasStartedUsingRecipe ? 'mb-6' : ''}>
+                  <RecipeActivities
+                    append={(text: string) => appendWithTracking(text)}
+                    activities={
+                      Array.isArray(recipeConfig.activities) ? recipeConfig.activities : null
+                    }
+                    title={recipeConfig.title}
+                    parameterValues={recipeParameters || {}}
+                  />
+                </div>
+              )}
 
-            {/* Messages or Popular Topics */}
-            {
-              loadingChat ? null : filteredMessages.length > 0 ||
-                (recipeConfig && recipeAccepted && hasStartedUsingRecipe) ? (
-                <>
-                  {disableSearch ? (
-                    // Render messages without SearchView wrapper when search is disabled
-                    <ProgressiveMessageList
-                      messages={filteredMessages}
-                      chat={chat}
-                      toolCallNotifications={toolCallNotifications}
-                      append={append}
-                      appendMessage={(newMessage) => {
-                        const updatedMessages = [...messages, newMessage];
-                        setMessages(updatedMessages);
-                      }}
-                      isUserMessage={isUserMessage}
-                      isStreamingMessage={chatState !== ChatState.Idle}
-                      onMessageUpdate={onMessageUpdate}
-                      onRenderingComplete={handleRenderingComplete}
-                    />
-                  ) : (
-                    // Render messages with SearchView wrapper when search is enabled
-                    <SearchView>
+              {/* Messages or Popular Topics */}
+              {
+                loadingChat ? null : filteredMessages.length > 0 ||
+                  (recipeConfig && recipeAccepted && hasStartedUsingRecipe) ? (
+                  <>
+                    {disableSearch ? (
+                      // Render messages without SearchView wrapper when search is disabled
                       <ProgressiveMessageList
                         messages={filteredMessages}
                         chat={chat}
@@ -424,58 +422,71 @@ function BaseChatContent({
                         onMessageUpdate={onMessageUpdate}
                         onRenderingComplete={handleRenderingComplete}
                       />
-                    </SearchView>
-                  )}
-
-                  {error && (
-                    <>
-                      <div className="flex flex-col items-center justify-center p-4">
-                        <div className="text-red-700 dark:text-red-300 bg-red-400/50 p-3 rounded-lg mb-2">
-                          {error.message || 'Honk! Goose experienced an error while responding'}
-                        </div>
-
-                        {/* Action buttons for all errors including token limit errors */}
-                        <div className="flex gap-2 mt-2">
-                          <div
-                            className="px-3 py-2 text-center whitespace-nowrap cursor-pointer text-textStandard border border-borderSubtle hover:bg-bgSubtle rounded-full inline-block transition-all duration-150"
-                            onClick={async () => {
-                              clearError();
-
-                              await handleManualCompaction(messages, setMessages, append);
-                            }}
-                          >
-                            Summarize Conversation
+                    ) : (
+                      // Render messages with SearchView wrapper when search is enabled
+                      <SearchView>
+                        <ProgressiveMessageList
+                          messages={filteredMessages}
+                          chat={chat}
+                          toolCallNotifications={toolCallNotifications}
+                          append={append}
+                          appendMessage={(newMessage) => {
+                            const updatedMessages = [...messages, newMessage];
+                            setMessages(updatedMessages);
+                          }}
+                          isUserMessage={isUserMessage}
+                          isStreamingMessage={chatState !== ChatState.Idle}
+                          onMessageUpdate={onMessageUpdate}
+                          onRenderingComplete={handleRenderingComplete}
+                        />
+                      </SearchView>
+                    )}
+                    {error && (
+                      <>
+                        <div className="flex flex-col items-center justify-center p-4">
+                          <div className="text-red-700 dark:text-red-300 bg-red-400/50 p-3 rounded-lg mb-2">
+                            {error.message || 'Honk! Goose experienced an error while responding'}
                           </div>
-                          <div
-                            className="px-3 py-2 text-center whitespace-nowrap cursor-pointer text-textStandard border border-borderSubtle hover:bg-bgSubtle rounded-full inline-block transition-all duration-150"
-                            onClick={async () => {
-                              // Find the last user message
-                              const lastUserMessage = messages.reduceRight(
-                                (found, m) => found || (m.role === 'user' ? m : null),
-                                null as Message | null
-                              );
-                              if (lastUserMessage) {
-                                await append(lastUserMessage);
-                              }
-                            }}
-                          >
-                            Retry Last Message
+
+                          {/* Action buttons for all errors including token limit errors */}
+                          <div className="flex gap-2 mt-2">
+                            <div
+                              className="px-3 py-2 text-center whitespace-nowrap cursor-pointer text-textStandard border border-borderSubtle hover:bg-bgSubtle rounded-full inline-block transition-all duration-150"
+                              onClick={async () => {
+                                clearError();
+
+                                await handleManualCompaction(messages, setMessages, append);
+                              }}
+                            >
+                              Summarize Conversation
+                            </div>
+                            <div
+                              className="px-3 py-2 text-center whitespace-nowrap cursor-pointer text-textStandard border border-borderSubtle hover:bg-bgSubtle rounded-full inline-block transition-all duration-150"
+                              onClick={async () => {
+                                // Find the last user message
+                                const lastUserMessage = messages.reduceRight(
+                                  (found, m) => found || (m.role === 'user' ? m : null),
+                                  null as Message | null
+                                );
+                                if (lastUserMessage) {
+                                  await append(lastUserMessage);
+                                }
+                              }}
+                            >
+                              Retry Last Message
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </>
-                  )}
+                      </>
+                    )}
+                    <div className="block h-32" /> {/* Extra space for floating input */}
+                  </>
+                ) : null /* Show nothing when messages.length === 0 && suppressEmptyState === true */
+              }
 
-                  <div className="block h-8" />
-                </>
-              ) : !recipeConfig && showPopularTopics ? (
-                /* Show PopularChatTopics when no messages, no recipe, and showPopularTopics is true (Pair view) */
-                <PopularChatTopics append={(text: string) => append(text)} />
-              ) : null /* Show nothing when messages.length === 0 && suppressEmptyState === true */
-            }
-
-            {/* Custom content after messages */}
-            {renderAfterMessages && renderAfterMessages()}
+              {/* Custom content after messages */}
+              {renderAfterMessages && renderAfterMessages()}
+            </div>
           </ScrollArea>
 
           {/* Fixed loading indicator at bottom left of chat container */}
@@ -495,35 +506,53 @@ function BaseChatContent({
           )}
         </div>
 
-        <div
-          className={`relative z-10 ${disableAnimation ? '' : 'animate-[fadein_400ms_ease-in_forwards]'}`}
-        >
-          <ChatInput
-            sessionId={chat.sessionId}
-            handleSubmit={handleSubmit}
-            chatState={chatState}
-            onStop={onStopGoose}
-            commandHistory={commandHistory}
-            initialValue={input || ''}
-            setView={setView}
-            numTokens={sessionTokenCount}
-            inputTokens={sessionInputTokens || localInputTokens}
-            outputTokens={sessionOutputTokens || localOutputTokens}
-            droppedFiles={droppedFiles}
-            onFilesProcessed={() => setDroppedFiles([])} // Clear dropped files after processing
-            messages={messages}
-            setMessages={setMessages}
-            disableAnimation={disableAnimation}
-            sessionCosts={sessionCosts}
-            setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
-            recipeConfig={recipeConfig}
-            recipeAccepted={recipeAccepted}
-            initialPrompt={initialPrompt}
-            toolCount={toolCount || 0}
-            autoSubmit={autoSubmit}
-            append={append}
-            {...customChatInputProps}
-          />
+        {/* Popular Chat Topics - Centered above input field */}
+        {!recipeConfig && showPopularTopics && filteredMessages.length === 0 && (
+          <div className="absolute bottom-36 left-0 right-0 flex justify-center z-10 pointer-events-none px-6">
+            <div className="w-full max-w-[720px] pointer-events-auto">
+              <PopularChatTopics append={(text: string) => append(text)} />
+            </div>
+          </div>
+        )}
+
+        {/* Chat Input - Positioned within the main content area */}
+        <div className="absolute bottom-0 left-0 right-0 flex justify-center z-20 pointer-events-none px-6">
+          <div className="w-full max-w-[720px] mb-4 pointer-events-auto">
+            <div
+              className="bg-background-default rounded-[24px] overflow-hidden"
+              style={{
+                boxShadow:
+                  '0 12px 32px 0 rgba(0, 0, 0, 0.04), 0 8px 16px 0 rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 0 1px 0 rgba(0, 0, 0, 0.20)',
+              }}
+            >
+              <ChatInput
+                sessionId={chat.sessionId}
+                handleSubmit={handleSubmit}
+                chatState={chatState}
+                onStop={onStopGoose}
+                commandHistory={commandHistory}
+                initialValue={input || ''}
+                setView={setView}
+                numTokens={sessionTokenCount}
+                inputTokens={sessionInputTokens || localInputTokens}
+                outputTokens={sessionOutputTokens || localOutputTokens}
+                droppedFiles={droppedFiles}
+                onFilesProcessed={() => setDroppedFiles([])} // Clear dropped files after processing
+                messages={messages}
+                setMessages={setMessages}
+                disableAnimation={disableAnimation}
+                sessionCosts={sessionCosts}
+                setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
+                recipeConfig={recipeConfig}
+                recipeAccepted={recipeAccepted}
+                initialPrompt={initialPrompt}
+                toolCount={toolCount || 0}
+                autoSubmit={autoSubmit}
+                append={append}
+                {...customChatInputProps}
+              />
+            </div>
+          </div>
         </div>
       </MainPanelLayout>
 

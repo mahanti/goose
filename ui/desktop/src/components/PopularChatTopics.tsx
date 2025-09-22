@@ -42,13 +42,13 @@ export default function PopularChatTopics({ append }: PopularChatTopicsProps) {
   };
 
   return (
-    <div className="absolute bottom-0 left-0 p-6 max-w-md">
-      <h3 className="text-text-muted text-sm mb-1">Popular chat topics</h3>
-      <div className="space-y-1">
+    <div className="flex flex-col items-center p-6">
+      <h3 className="text-text-muted text-sm mb-4 text-center">Popular chat topics</h3>
+      <div className="space-y-2 w-full max-w-2xl">
         {POPULAR_TOPICS.map((topic) => (
           <div
             key={topic.id}
-            className="flex items-center justify-between py-1.5 hover:bg-bgSubtle rounded-md cursor-pointer transition-colors"
+            className="flex items-center justify-between py-3 px-4 hover:bg-bgSubtle rounded-xl cursor-pointer transition-colors border border-borderSubtle bg-background-default shadow-sm"
             onClick={() => handleTopicClick(topic.prompt)}
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -59,7 +59,7 @@ export default function PopularChatTopics({ append }: PopularChatTopicsProps) {
             </div>
             <div className="flex-shrink-0 ml-4">
               <button
-                className="text-sm text-text-muted hover:text-text-default transition-colors cursor-pointer"
+                className="text-sm text-text-muted hover:text-text-default transition-colors cursor-pointer px-3 py-1 rounded-lg hover:bg-background-muted"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleTopicClick(topic.prompt);

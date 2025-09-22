@@ -4,6 +4,14 @@ import { z } from 'zod';
 import { Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Recipe, decodeRecipe } from '../../recipe';
 import { saveRecipe } from '../../recipe/recipeStorage';
 import * as yaml from 'yaml';
@@ -296,13 +304,17 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <>
-      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50">
-        <div className="bg-background-default border border-border-subtle rounded-lg p-6 w-[500px] max-w-[90vw]">
-          <h3 className="text-lg font-medium text-text-standard mb-4">Import Recipe</h3>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="text-iconStandard" size={24} />
+              Import Recipe
+            </DialogTitle>
+            <DialogDescription>Import a recipe from a deep link or YAML content.</DialogDescription>
+          </DialogHeader>
 
           <form
             onSubmit={(e) => {
@@ -310,6 +322,7 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
               e.stopPropagation();
               importRecipeForm.handleSubmit();
             }}
+            className="py-4"
           >
             <div className="space-y-4">
               <importRecipeForm.Subscribe selector={(state) => state.values}>
@@ -490,28 +503,33 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
                 )}
               </importRecipeForm.Field>
             </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <Button type="button" onClick={handleClose} variant="ghost" disabled={importing}>
-                Cancel
-              </Button>
-              <importRecipeForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
-              >
-                {([canSubmit, isSubmitting]) => (
-                  <Button
-                    type="submit"
-                    disabled={!canSubmit || importing || isSubmitting}
-                    variant="default"
-                  >
-                    {importing || isSubmitting ? 'Importing...' : 'Import Recipe'}
-                  </Button>
-                )}
-              </importRecipeForm.Subscribe>
-            </div>
           </form>
-        </div>
-      </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              onClick={handleClose}
+              variant="outline"
+              disabled={importing}
+              className="rounded-full px-6"
+            >
+              Cancel
+            </Button>
+            <importRecipeForm.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+              {([canSubmit, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  disabled={!canSubmit || importing || isSubmitting}
+                  variant="default"
+                  className="rounded-full px-6"
+                >
+                  {importing || isSubmitting ? 'Importing...' : 'Import Recipe'}
+                </Button>
+              )}
+            </importRecipeForm.Subscribe>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Schema Modal */}
       {showSchemaModal && (
@@ -547,8 +565,7 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
 // Export the button component for easy access
 export function ImportRecipeButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button onClick={onClick} variant="default" size="sm" className="flex items-center gap-2">
-      <Download className="w-4 h-4" />
+    <Button onClick={onClick} variant="default" size="sm" className="rounded-full px-4">
       Import Recipe
     </Button>
   );

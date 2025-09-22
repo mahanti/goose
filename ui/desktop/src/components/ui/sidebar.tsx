@@ -16,10 +16,11 @@ import { useIsMobile } from '../../hooks/use-mobile';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = '12rem';
 const SIDEBAR_WIDTH_MOBILE = 'fit-content';
 const SIDEBAR_WIDTH_ICON = '38px';
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
+const SIDEBAR_MIN_WIDTH = 200;
+const SIDEBAR_MAX_WIDTH = 400;
 
 type SidebarContextProps = {
   state: 'expanded' | 'collapsed';
@@ -29,6 +30,10 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  width: number;
+  setWidth: (width: number) => void;
+  isResizing: boolean;
+  setIsResizing: (resizing: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -57,6 +62,10 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
+
+  // Width and resizing state
+  const [width, setWidth] = React.useState(240); // Default width in pixels (12rem = 192px, but we'll use 240px)
+  const [isResizing, setIsResizing] = React.useState(false);
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -108,8 +117,24 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      width,
+      setWidth,
+      isResizing,
+      setIsResizing,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      width,
+      setWidth,
+      isResizing,
+      setIsResizing,
+    ]
   );
 
   return (
@@ -119,13 +144,14 @@ function SidebarProvider({
           data-slot="sidebar-wrapper"
           style={
             {
-              '--sidebar-width': SIDEBAR_WIDTH,
+              '--sidebar-width': `${width}px`,
               '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
               ...style,
             } as React.CSSProperties
           }
           className={cn(
             'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full',
+            { 'cursor-col-resize': isResizing },
             className
           )}
           {...props}
@@ -211,7 +237,10 @@ function Sidebar({
             ? 'group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]'
             : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon)'
         )}
-      />
+      >
+        {/* Collapsed sidebar drag handle - visible when sidebar is closed */}
+        {state === 'collapsed' && <CollapsedSidebarHandle />}
+      </div>
       <div
         data-slot="sidebar-container"
         className={cn(
@@ -221,7 +250,7 @@ function Sidebar({
             : 'right-0 group-data-[collapsible=offcanvas]:translate-x-[100%]',
           // Adjust the padding for floating and inset variants.
           variant === 'floating' || variant === 'inset'
-            ? 'py-2 pl-2 pr-4 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
+            ? 'group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
             : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
           className
         )}
@@ -233,9 +262,10 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="bg-sidebar flex h-full w-full flex-col group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:border"
+          className="bg-sidebar flex h-full w-full flex-col group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:border relative"
         >
           {children}
+          <SidebarResizeHandle />
         </div>
       </div>
     </div>
@@ -683,7 +713,142 @@ function SidebarMenuSubButton({
   );
 }
 
+// Collapsed sidebar drag handle - visible when sidebar is closed
+function CollapsedSidebarHandle() {
+  const { setWidth, setIsResizing, open, setOpen } = useSidebar();
+  const [startX, setStartX] = React.useState(0);
+
+  const handleMouseDown = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+      setStartX(e.clientX);
+
+      const handleMouseMove = (e: MouseEvent) => {
+        const deltaX = e.clientX - startX;
+
+        // If dragging to the right, open sidebar and set width
+        if (deltaX > 20) {
+          // 20px threshold to start opening
+          if (!open) {
+            setOpen(true);
+          }
+          const newWidth = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, deltaX));
+          setWidth(newWidth);
+        }
+      };
+
+      const handleMouseUp = () => {
+        setIsResizing(false);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [setWidth, setIsResizing, open, setOpen, startX]
+  );
+
+  const handleDoubleClick = React.useCallback(() => {
+    setOpen(true);
+  }, [setOpen]);
+
+  return (
+    <div
+      data-slot="collapsed-sidebar-handle"
+      className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors group z-20"
+      onMouseDown={handleMouseDown}
+      onDoubleClick={handleDoubleClick}
+      title="Drag to open sidebar, double-click to expand"
+    >
+      {/* Visual indicator for collapsed handle */}
+      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-0.5 h-12 bg-blue-500/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+    </div>
+  );
+}
+
+// Resize handle component
+function SidebarResizeHandle() {
+  const { width, setWidth, setIsResizing, open, setOpen, toggleSidebar } = useSidebar();
+  const [startX, setStartX] = React.useState(0);
+  const [startWidth, setStartWidth] = React.useState(0);
+
+  const handleMouseDown = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+      setStartX(e.clientX);
+      setStartWidth(width);
+
+      const handleMouseMove = (e: MouseEvent) => {
+        const deltaX = e.clientX - startX;
+        const newWidth = startWidth + deltaX;
+
+        // If dragging to collapse (width < minimum), collapse the sidebar
+        if (newWidth < SIDEBAR_MIN_WIDTH) {
+          if (open) {
+            setOpen(false);
+          }
+        } else {
+          // If dragging to expand and sidebar is collapsed, open it
+          if (!open) {
+            setOpen(true);
+          }
+          // Set the width within bounds
+          const clampedWidth = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, newWidth));
+          setWidth(clampedWidth);
+        }
+      };
+
+      const handleMouseUp = () => {
+        setIsResizing(false);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [width, setWidth, setIsResizing, open, setOpen, startX, startWidth]
+  );
+
+  const handleDoubleClick = React.useCallback(() => {
+    toggleSidebar();
+  }, [toggleSidebar]);
+
+  return (
+    <div
+      data-slot="sidebar-resize-handle"
+      className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-border-strong/10 active:bg-border-strong/20 transition-colors group"
+      onMouseDown={handleMouseDown}
+      onDoubleClick={handleDoubleClick}
+      title="Drag to resize, double-click to toggle"
+    >
+      {/* Visual drag indicator */}
+      <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-0.5 h-12 bg-border-strong/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Drag dots for better visual indication */}
+      <div className="absolute right-0.5 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity">
+        <div className="flex flex-col gap-0.5">
+          <div className="w-0.5 h-0.5 bg-border-strong rounded-full" />
+          <div className="w-0.5 h-0.5 bg-border-strong rounded-full" />
+          <div className="w-0.5 h-0.5 bg-border-strong rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export {
+  CollapsedSidebarHandle,
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -705,6 +870,7 @@ export {
   SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
+  SidebarResizeHandle,
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,

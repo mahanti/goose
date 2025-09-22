@@ -14,72 +14,58 @@
  * Hub (input submission) → Pair (new conversation with the submitted message)
  */
 
-import { SessionInsights } from './sessions/SessionsInsights';
-import ChatInput from './ChatInput';
-import { ChatState } from '../types/chatState';
-import { ContextManagerProvider } from './context_management/ContextManager';
-import 'react-toastify/dist/ReactToastify.css';
+import BaseChat from './BaseChat';
 import { View, ViewOptions } from '../utils/navigationUtils';
+import { ChatType } from '../types/chat';
+import { useIsMobile } from '../hooks/use-mobile';
+import { useSidebar } from './ui/sidebar';
+import { cn } from '../utils';
 
 export default function Hub({
   setView,
   setIsGoosehintsModalOpen,
-  isExtensionsLoading,
   resetChat,
 }: {
   setView: (view: View, viewOptions?: ViewOptions) => void;
   setIsGoosehintsModalOpen: (isOpen: boolean) => void;
-  isExtensionsLoading: boolean;
   resetChat: () => void;
 }) {
-  // Handle chat input submission - create new chat and navigate to pair
-  const handleSubmit = (e: React.FormEvent) => {
-    const customEvent = e as unknown as CustomEvent;
-    const combinedTextFromInput = customEvent.detail?.value || '';
+  const isMobile = useIsMobile();
+  const { state: sidebarState } = useSidebar();
 
-    if (combinedTextFromInput.trim()) {
+  // Create an empty chat object for the Hub
+  const emptyChat: ChatType = {
+    sessionId: '',
+    title: 'New Chat',
+    messages: [],
+    recipeConfig: null,
+    messageHistoryIndex: 0,
+  };
+  // Handle chat input submission - create new chat and navigate to pair
+  const handleMessageSubmit = (message: string) => {
+    if (message.trim()) {
       // Navigate to pair page with the message to be submitted
       // Pair will handle creating the new chat session
       resetChat();
       setView('pair', {
         disableAnimation: true,
-        initialMessage: combinedTextFromInput,
+        initialMessage: message,
       });
     }
-
-    e.preventDefault();
   };
 
   return (
-    <ContextManagerProvider>
-      <div className="flex flex-col h-full bg-background-muted">
-        <div className="flex-1 flex flex-col mb-0.5">
-          <SessionInsights />
-        </div>
-
-        <ChatInput
-          sessionId={null}
-          handleSubmit={handleSubmit}
-          autoSubmit={false}
-          chatState={ChatState.Idle}
-          onStop={() => {}}
-          commandHistory={[]}
-          initialValue=""
-          setView={setView}
-          numTokens={0}
-          inputTokens={0}
-          outputTokens={0}
-          droppedFiles={[]}
-          onFilesProcessed={() => {}}
-          messages={[]}
-          setMessages={() => {}}
-          disableAnimation={false}
-          sessionCosts={undefined}
-          setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
-          isExtensionsLoading={isExtensionsLoading}
-          toolCount={0}
-        />
-      </div>
-    </ContextManagerProvider>
+    <BaseChat
+      chat={emptyChat}
+      setChat={() => {}} // No-op since Hub doesn't need to update chat state
+      loadingChat={false}
+      autoSubmit={false}
+      setView={setView}
+      setIsGoosehintsModalOpen={setIsGoosehintsModalOpen}
+      onMessageSubmit={handleMessageSubmit}
+      contentClassName={cn('pr-1 pb-10', (isMobile || sidebarState === 'collapsed') && 'pt-11')}
+      showPopularTopics={true}
+      suppressEmptyState={false}
+    />
   );
 }

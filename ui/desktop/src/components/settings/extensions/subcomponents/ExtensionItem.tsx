@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Switch } from '../../../ui/switch';
-import { Gear } from '../../../icons/Gear';
 import { FixedExtensionEntry } from '../../../ConfigContext';
 import { getSubtitle, getFriendlyTitle } from './ExtensionList';
-import { Card, CardHeader, CardTitle, CardContent, CardAction } from '../../../ui/card';
+import { Card } from '../../../ui/card';
 
 interface ExtensionItemProps {
   extension: FixedExtensionEntry;
@@ -73,34 +72,37 @@ export default function ExtensionItem({
 
   return (
     <Card
-      className="transition-all duration-200 hover:shadow-default hover:cursor-pointer min-h-[120px] overflow-hidden"
+      className="py-2 px-4 mb-2 bg-background-default border-none hover:bg-background-muted cursor-pointer transition-all duration-150"
       onClick={() => handleToggle(extension)}
     >
-      <CardHeader>
-        <CardTitle className="">{getFriendlyTitle(extension)}</CardTitle>
-
-        <CardAction onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-end gap-2">
-            {editable && (
-              <button
-                className="text-textSubtle hover:text-textStandard"
-                onClick={() => (onConfigure ? onConfigure(extension) : () => {})}
-              >
-                <Gear className="h-4 w-4" />
-              </button>
-            )}
-            <Switch
-              checked={(isToggling && visuallyEnabled) || extension.enabled}
-              onCheckedChange={() => handleToggle(extension)}
-              disabled={isToggling}
-              variant="mono"
-            />
+      <div className="flex justify-between items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-base truncate max-w-[50vw]">{getFriendlyTitle(extension)}</h3>
           </div>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="px-4 text-sm text-text-muted overflow-hidden break-words">
-        {renderSubtitle()}
-      </CardContent>
+          <div className="text-sm text-text-muted mb-1 overflow-hidden break-words">
+            {renderSubtitle()}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {editable && (
+            <button
+              className="px-3 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-text-muted hover:text-text-standard transition-colors text-sm"
+              onClick={() => (onConfigure ? onConfigure(extension) : () => {})}
+              title="Configure extension"
+            >
+              Configure
+            </button>
+          )}
+          <Switch
+            checked={(isToggling && visuallyEnabled) || extension.enabled}
+            onCheckedChange={() => handleToggle(extension)}
+            disabled={isToggling}
+            variant="mono"
+          />
+        </div>
+      </div>
     </Card>
   );
 }

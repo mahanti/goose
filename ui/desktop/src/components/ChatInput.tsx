@@ -1,15 +1,13 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { FolderKey, ScrollText } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/Tooltip';
 import { Button } from './ui/button';
 import type { View } from '../utils/navigationUtils';
 import Stop from './ui/Stop';
-import { Attach, Send, Close, Microphone } from './icons';
+import { Attach, Close, Microphone } from './icons';
 import { ChatState } from '../types/chatState';
 import { debounce } from 'lodash';
 import { LocalMessageStorage } from '../utils/localMessageStorage';
 import { Message } from '../types/message';
-import { DirSwitcher } from './bottom_menu/DirSwitcher';
 import ModelsBottomBar from './settings/models/bottom_bar/ModelsBottomBar';
 import { BottomMenuModeSelection } from './bottom_menu/BottomMenuModeSelection';
 import { AlertType, useAlerts } from './alerts';
@@ -24,6 +22,7 @@ import { useContextManager } from './context_management/ContextManager';
 import { useChatContext } from '../contexts/ChatContext';
 import { COST_TRACKING_ENABLED } from '../updates';
 import { CostTracker } from './bottom_menu/CostTracker';
+import { ExtensionsDropdown } from './bottom_menu/ExtensionsDropdown';
 import { DroppedFile, useFileDrop } from '../hooks/useFileDrop';
 import { Recipe } from '../recipe';
 import MessageQueue from './MessageQueue';
@@ -382,36 +381,6 @@ export default function ChatInput({
       window.electron.deleteTempFile(imageToRemove.filePath);
     }
     setPastedImages((currentImages) => currentImages.filter((img) => img.id !== idToRemove));
-  };
-
-  const handleRetryImageSave = async (imageId: string) => {
-    const imageToRetry = pastedImages.find((img) => img.id === imageId);
-    if (!imageToRetry || !imageToRetry.dataUrl) return;
-
-    // Set the image to loading state
-    setPastedImages((prev) =>
-      prev.map((img) => (img.id === imageId ? { ...img, isLoading: true, error: undefined } : img))
-    );
-
-    try {
-      const result = await window.electron.saveDataUrlToTemp(imageToRetry.dataUrl, imageId);
-      setPastedImages((prev) =>
-        prev.map((img) =>
-          img.id === result.id
-            ? { ...img, filePath: result.filePath, error: result.error, isLoading: false }
-            : img
-        )
-      );
-    } catch (err) {
-      console.error('Error retrying image save:', err);
-      setPastedImages((prev) =>
-        prev.map((img) =>
-          img.id === imageId
-            ? { ...img, error: 'Failed to save image via Electron.', isLoading: false }
-            : img
-        )
-      );
-    }
   };
 
   useEffect(() => {
@@ -1136,30 +1105,62 @@ export default function ChatInput({
   const handleFileSelect = async () => {
     const path = await window.electron.selectFileOrDirectory();
     if (path) {
-      const newValue = displayValue.trim() ? `${displayValue.trim()} ${path}` : path;
-      setDisplayValue(newValue);
-      setValue(newValue);
+      // Create a file object and add it to the dropped files list instead of adding to input text
+      const fileName = path.split('/').pop() || 'Unknown file';
+      const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(fileExtension);
+
+      const newFile: DroppedFile = {
+        id: `selected-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        path,
+        name: fileName,
+        type: isImage ? `image/${fileExtension}` : 'application/octet-stream',
+        isImage,
+        isLoading: false, // No preview generation for now
+      };
+
+      // Add to local dropped files to show as visual preview
+      setLocalDroppedFiles((prev) => [...prev, newFile]);
+
       textAreaRef.current?.focus();
     }
   };
 
   const handleMentionFileSelect = (filePath: string) => {
-    // Replace the @ mention with the file path
+    // Remove the @ mention from the input text and create a visual file chip instead
     const beforeMention = displayValue.slice(0, mentionPopover.mentionStart);
     const afterMention = displayValue.slice(
       mentionPopover.mentionStart + 1 + mentionPopover.query.length
     );
-    const newValue = `${beforeMention}${filePath}${afterMention}`;
+    const newValue = `${beforeMention}${afterMention}`;
 
     setDisplayValue(newValue);
     setValue(newValue);
+
+    // Create a file object and add it to the dropped files list for visual preview
+    const fileName = filePath.split('/').pop() || 'Unknown file';
+    const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(fileExtension);
+
+    const newFile: DroppedFile = {
+      id: `mention-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      path: filePath,
+      name: fileName,
+      type: isImage ? `image/${fileExtension}` : 'application/octet-stream',
+      isImage,
+      isLoading: false, // No preview generation for now
+    };
+
+    // Add to local dropped files to show as visual preview
+    setLocalDroppedFiles((prev) => [...prev, newFile]);
+
     setMentionPopover((prev) => ({ ...prev, isOpen: false }));
     textAreaRef.current?.focus();
 
-    // Set cursor position after the inserted file path
+    // Set cursor position after removing the @ mention
     setTimeout(() => {
       if (textAreaRef.current) {
-        const newCursorPosition = beforeMention.length + filePath.length;
+        const newCursorPosition = beforeMention.length;
         textAreaRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
       }
     }, 0);
@@ -1287,14 +1288,84 @@ export default function ChatInput({
           className="border-b border-borderSubtle"
         />
       )}
+
+      {/* Simplified file chips above input */}
+      {(pastedImages.length > 0 || allDroppedFiles.length > 0) && (
+        <div className="flex flex-wrap gap-2 px-4 pb-3">
+          {/* Render pasted images first */}
+          {pastedImages.map((img) => (
+            <div
+              key={img.id}
+              className="relative group w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center"
+            >
+              {/* Simple file icon */}
+              <div className="w-4 h-4 bg-neutral-400 dark:bg-neutral-500 rounded flex items-center justify-center">
+                <span className="text-[6px] font-bold text-white">📄</span>
+              </div>
+              {img.isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                  <div className="animate-spin rounded-full h-3 w-3 border border-neutral-300 border-t-neutral-600"></div>
+                </div>
+              )}
+              {!img.isLoading && (
+                <Button
+                  type="button"
+                  shape="round"
+                  onClick={() => handleRemovePastedImage(img.id)}
+                  className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity z-10 bg-red-500 hover:bg-red-600 text-white border-red-500 w-4 h-4 p-0"
+                  aria-label="Remove image"
+                  variant="outline"
+                  size="xs"
+                >
+                  <Close className="w-2 h-2" />
+                </Button>
+              )}
+            </div>
+          ))}
+
+          {/* Render dropped files after pasted images */}
+          {allDroppedFiles.map((file) => (
+            <div
+              key={file.id}
+              className="relative group w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center"
+            >
+              {/* Simple file icon based on type */}
+              <div className="w-4 h-4 bg-neutral-400 dark:bg-neutral-500 rounded flex items-center justify-center">
+                <span className="text-[6px] font-bold text-white">
+                  {file.isImage ? '🖼️' : '📄'}
+                </span>
+              </div>
+              {file.isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                  <div className="animate-spin rounded-full h-3 w-3 border border-neutral-300 border-t-neutral-600"></div>
+                </div>
+              )}
+              {!file.isLoading && (
+                <Button
+                  type="button"
+                  shape="round"
+                  onClick={() => handleRemoveDroppedFile(file.id)}
+                  className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity z-10 bg-red-500 hover:bg-red-600 text-white border-red-500 w-4 h-4 p-0"
+                  aria-label="Remove file"
+                  variant="outline"
+                  size="xs"
+                >
+                  <Close className="w-2 h-2" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Input row with inline action buttons wrapped in form */}
-      <form onSubmit={onFormSubmit} className="relative flex items-end">
+      <form onSubmit={onFormSubmit} className="relative flex pb-4 items-end">
         <div className="relative flex-1">
           <textarea
             data-testid="chat-input"
             autoFocus
             id="dynamic-textarea"
-            placeholder={isRecording ? '' : '⌘↑/⌘↓ to navigate messages'}
+            placeholder={isRecording ? '' : 'How can I help?'}
             value={displayValue}
             onChange={handleChange}
             onCompositionStart={handleCompositionStart}
@@ -1330,43 +1401,17 @@ export default function ChatInput({
           {dictationSettings?.enabled && (
             <>
               {!canUseDictation ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex">
-                      <Button
-                        type="button"
-                        size="sm"
-                        shape="round"
-                        variant="outline"
-                        onClick={() => {}}
-                        disabled={true}
-                        className="bg-slate-600 text-white cursor-not-allowed opacity-50 border-slate-600 rounded-full px-6 py-2"
-                      >
-                        <Microphone />
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {dictationSettings.provider === 'openai' ? (
-                      <p>
-                        OpenAI API key is not configured. Set it up in <b>Settings</b> {'>'}{' '}
-                        <b>Models.</b>
-                      </p>
-                    ) : dictationSettings.provider === 'elevenlabs' ? (
-                      <p>
-                        ElevenLabs API key is not configured. Set it up in <b>Settings</b> {'>'}{' '}
-                        <b>Chat</b> {'>'} <b>Voice Dictation.</b>
-                      </p>
-                    ) : dictationSettings.provider === null ? (
-                      <p>
-                        Dictation is not configured. Configure it in <b>Settings</b> {'>'}{' '}
-                        <b>Chat</b> {'>'} <b>Voice Dictation.</b>
-                      </p>
-                    ) : (
-                      <p>Dictation provider is not properly configured.</p>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
+                <Button
+                  type="button"
+                  size="sm"
+                  shape="round"
+                  variant="outline"
+                  onClick={() => {}}
+                  disabled={true}
+                  className="bg-neutral-600 text-white cursor-not-allowed opacity-50 border-neutral-600 rounded-full px-6 py-2"
+                >
+                  <Microphone />
+                </Button>
               ) : (
                 <Button
                   type="button"
@@ -1385,8 +1430,8 @@ export default function ChatInput({
                     isRecording
                       ? 'bg-red-500 text-white hover:bg-red-600 border-red-500'
                       : isTranscribing
-                        ? 'bg-slate-600 text-white cursor-not-allowed animate-pulse border-slate-600'
-                        : 'bg-slate-600 text-white hover:bg-slate-700 border-slate-600'
+                        ? 'bg-neutral-600 text-white cursor-not-allowed animate-pulse border-neutral-600'
+                        : 'bg-neutral-600 text-white hover:bg-neutral-700 border-neutral-600'
                   }`}
                 >
                   <Microphone />
@@ -1403,49 +1448,25 @@ export default function ChatInput({
               size="sm"
               shape="round"
               variant="outline"
-              className="bg-slate-600 text-white hover:bg-slate-700 border-slate-600 rounded-full px-6 py-2"
+              className="bg-neutral-600 text-white hover:bg-neutral-700 border-neutral-600 rounded-full px-6 py-2"
             >
               <Stop />
             </Button>
           ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    shape="round"
-                    variant="outline"
-                    disabled={isSubmitButtonDisabled}
-                    className={`rounded-full px-10 py-2 flex items-center gap-2 ${
-                      isSubmitButtonDisabled
-                        ? 'bg-slate-600 text-white cursor-not-allowed opacity-50 border-slate-600'
-                        : 'bg-slate-600 text-white hover:bg-slate-700 border-slate-600 hover:cursor-pointer'
-                    }`}
-                  >
-                    <Send className="w-4 h-4" />
-                    <span className="text-sm">Send</span>
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>
-                  {isExtensionsLoading
-                    ? 'Loading extensions...'
-                    : isCompacting
-                      ? 'Compacting conversation...'
-                      : isAnyImageLoading
-                        ? 'Waiting for images to save...'
-                        : isAnyDroppedFileLoading
-                          ? 'Processing dropped files...'
-                          : isRecording
-                            ? 'Recording...'
-                            : isTranscribing
-                              ? 'Transcribing...'
-                              : (chatContext?.agentWaitingMessage ?? 'Send')}
-                </p>
-              </TooltipContent>
-            </Tooltip>
+            <Button
+              type="submit"
+              size="sm"
+              shape="round"
+              variant="outline"
+              disabled={isSubmitButtonDisabled}
+              className={`rounded-full px-8 py-2 flex items-center gap-2 ${
+                isSubmitButtonDisabled
+                  ? 'bg-neutral-600 text-white cursor-not-allowed opacity-50 border-neutral-600'
+                  : 'bg-neutral-600 text-white hover:bg-neutral-700 border-neutral-600 hover:cursor-pointer'
+              }`}
+            >
+              <span className="text-sm">Send</span>
+            </Button>
           )}
 
           {/* Recording/transcribing status indicator - positioned above the button row */}
@@ -1470,198 +1491,70 @@ export default function ChatInput({
         </div>
       </form>
 
-      {/* Combined files and images preview */}
-      {(pastedImages.length > 0 || allDroppedFiles.length > 0) && (
-        <div className="flex flex-wrap gap-2 p-2 border-t border-borderSubtle">
-          {/* Render pasted images first */}
-          {pastedImages.map((img) => (
-            <div key={img.id} className="relative group w-20 h-20">
-              {img.dataUrl && (
-                <img
-                  src={img.dataUrl}
-                  alt={`Pasted image ${img.id}`}
-                  className={`w-full h-full object-cover rounded border ${img.error ? 'border-red-500' : 'border-borderStandard'}`}
-                />
-              )}
-              {img.isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
-                </div>
-              )}
-              {img.error && !img.isLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 rounded p-1 text-center">
-                  <p className="text-red-400 text-[10px] leading-tight break-all mb-1">
-                    {img.error.substring(0, 50)}
-                  </p>
-                  {img.dataUrl && (
-                    <Button
-                      type="button"
-                      onClick={() => handleRetryImageSave(img.id)}
-                      title="Retry saving image"
-                      variant="outline"
-                      size="xs"
-                    >
-                      Retry
-                    </Button>
-                  )}
-                </div>
-              )}
-              {!img.isLoading && (
-                <Button
-                  type="button"
-                  shape="round"
-                  onClick={() => handleRemovePastedImage(img.id)}
-                  className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity z-10"
-                  aria-label="Remove image"
-                  variant="outline"
-                  size="xs"
-                >
-                  <Close />
-                </Button>
-              )}
-            </div>
-          ))}
-
-          {/* Render dropped files after pasted images */}
-          {allDroppedFiles.map((file) => (
-            <div key={file.id} className="relative group">
-              {file.isImage ? (
-                // Image preview
-                <div className="w-20 h-20">
-                  {file.dataUrl && (
-                    <img
-                      src={file.dataUrl}
-                      alt={file.name}
-                      className={`w-full h-full object-cover rounded border ${file.error ? 'border-red-500' : 'border-borderStandard'}`}
-                    />
-                  )}
-                  {file.isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded">
-                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
-                    </div>
-                  )}
-                  {file.error && !file.isLoading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 rounded p-1 text-center">
-                      <p className="text-red-400 text-[10px] leading-tight break-all">
-                        {file.error.substring(0, 30)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // File box preview
-                <div className="flex items-center gap-2 px-3 py-2 bg-bgSubtle border border-borderStandard rounded-lg min-w-[120px] max-w-[200px]">
-                  <div className="flex-shrink-0 w-8 h-8 bg-background-default border border-borderSubtle rounded flex items-center justify-center text-xs font-mono text-textSubtle">
-                    {file.name.split('.').pop()?.toUpperCase() || 'FILE'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-textStandard truncate" title={file.name}>
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-textSubtle">{file.type || 'Unknown type'}</p>
-                  </div>
-                </div>
-              )}
-              {!file.isLoading && (
-                <Button
-                  type="button"
-                  shape="round"
-                  onClick={() => handleRemoveDroppedFile(file.id)}
-                  className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity z-10"
-                  aria-label="Remove file"
-                  variant="outline"
-                  size="xs"
-                >
-                  <Close />
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Secondary actions and controls row below input */}
-      <div className="flex flex-row items-center gap-1 p-2 relative">
-        {/* Directory path */}
-        <DirSwitcher className="mr-0" />
-        <div className="w-px h-4 bg-border-default mx-2" />
-
+      {/* Secondary actions and controls row below input - horizontally scrollable */}
+      <div
+        className="flex flex-row items-center gap-2 p-2 relative overflow-x-auto scrollbar-hide"
+        style={{ gap: '8px' }}
+      >
         {/* Attach button */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              onClick={handleFileSelect}
-              variant="ghost"
-              size="sm"
-              className="flex items-center justify-center text-text-default/70 hover:text-text-default text-xs cursor-pointer transition-colors"
-            >
-              <Attach className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Attach file or directory</TooltipContent>
-        </Tooltip>
-        <div className="w-px h-4 bg-border-default mx-2" />
+        <Button
+          type="button"
+          onClick={handleFileSelect}
+          variant="ghost"
+          size="sm"
+          className="flex items-center justify-center text-text-default/70 hover:text-text-default text-xs cursor-pointer transition-colors rounded-full border border-border-default hover:bg-background-muted px-2 py-1 h-7 shrink-0"
+        >
+          <Attach className="w-3 h-3" />
+        </Button>
 
-        {/* Model selector, mode selector, alerts, summarize button */}
-        <div className="flex flex-row items-center">
-          {/* Cost Tracker */}
-          {COST_TRACKING_ENABLED && (
-            <>
-              <div className="flex items-center h-full ml-1 mr-1">
-                <CostTracker
-                  inputTokens={inputTokens}
-                  outputTokens={outputTokens}
-                  sessionCosts={sessionCosts}
-                />
-              </div>
-            </>
-          )}
-          <Tooltip>
-            <div>
-              <ModelsBottomBar
-                sessionId={sessionId}
-                dropdownRef={dropdownRef}
-                setView={setView}
-                alerts={alerts}
-                recipeConfig={recipeConfig}
-                hasMessages={messages.length > 0}
-              />
-            </div>
-          </Tooltip>
-          <div className="w-px h-4 bg-border-default mx-2" />
-          <BottomMenuModeSelection />
-          <div className="w-px h-4 bg-border-default mx-2" />
-          <div className="flex items-center h-full">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => setIsGoosehintsModalOpen?.(true)}
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center justify-center text-text-default/70 hover:text-text-default text-xs cursor-pointer"
-                >
-                  <FolderKey size={16} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Configure goosehints</TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
+        {/* Cost Tracker */}
+        {COST_TRACKING_ENABLED && (
+          <CostTracker
+            inputTokens={inputTokens}
+            outputTokens={outputTokens}
+            sessionCosts={sessionCosts}
+          />
+        )}
 
-        <MentionPopover
-          ref={mentionPopoverRef}
-          isOpen={mentionPopover.isOpen}
-          onClose={() => setMentionPopover((prev) => ({ ...prev, isOpen: false }))}
-          onSelect={handleMentionFileSelect}
-          position={mentionPopover.position}
-          query={mentionPopover.query}
-          selectedIndex={mentionPopover.selectedIndex}
-          onSelectedIndexChange={(index) =>
-            setMentionPopover((prev) => ({ ...prev, selectedIndex: index }))
-          }
+        {/* Model selector */}
+        <ModelsBottomBar
+          sessionId={sessionId}
+          dropdownRef={dropdownRef}
+          setView={setView}
+          alerts={alerts}
+          recipeConfig={recipeConfig}
+          hasMessages={messages.length > 0}
         />
+
+        {/* Mode selector */}
+        <BottomMenuModeSelection />
+
+        {/* Extensions dropdown */}
+        <ExtensionsDropdown />
+
+        {/* Goosehints button */}
+        <Button
+          onClick={() => setIsGoosehintsModalOpen?.(true)}
+          variant="ghost"
+          size="sm"
+          className="flex items-center justify-center text-text-default/70 hover:text-text-default text-xs cursor-pointer rounded-full border border-border-default hover:bg-background-muted px-2 py-1 h-7 shrink-0"
+        >
+          <FolderKey size={14} />
+        </Button>
       </div>
+
+      <MentionPopover
+        ref={mentionPopoverRef}
+        isOpen={mentionPopover.isOpen}
+        onClose={() => setMentionPopover((prev) => ({ ...prev, isOpen: false }))}
+        onSelect={handleMentionFileSelect}
+        position={mentionPopover.position}
+        query={mentionPopover.query}
+        selectedIndex={mentionPopover.selectedIndex}
+        onSelectedIndexChange={(index) =>
+          setMentionPopover((prev) => ({ ...prev, selectedIndex: index }))
+        }
+      />
     </div>
   );
 }

@@ -56,6 +56,7 @@ export function useAgent(): UseAgentReturn {
   const { getExtensions, addExtension, read } = useConfig();
 
   const resetChat = useCallback(() => {
+    console.log('useAgent: resetChat called');
     setSessionId(null);
     setAgentState(AgentState.UNINITIALIZED);
     setRecipeFromAppConfig(null);
@@ -64,10 +65,30 @@ export function useAgent(): UseAgentReturn {
   const agentIsInitialized = agentState === AgentState.INITIALIZED;
   const currentChat = useCallback(
     async (initContext: InitializationContext): Promise<ChatType> => {
+      console.log(
+        'useAgent: currentChat called with initContext.resumeSessionId:',
+        initContext.resumeSessionId
+      );
+      console.log('useAgent: agentIsInitialized:', agentIsInitialized, 'sessionId:', sessionId);
+
       if (agentIsInitialized && sessionId) {
+        // Check if we need to switch to a different session
+        const targetSessionId = initContext.resumeSessionId || sessionId;
+        console.log(
+          'useAgent: Agent already initialized, current sessionId:',
+          sessionId,
+          'target sessionId:',
+          targetSessionId
+        );
+
+        if (targetSessionId !== sessionId) {
+          console.log('useAgent: Switching to different session:', targetSessionId);
+          setSessionId(targetSessionId);
+        }
+
         const agentResponse = await resumeAgent({
           body: {
-            session_id: sessionId,
+            session_id: targetSessionId,
           },
           throwOnError: true,
         });
@@ -84,6 +105,12 @@ export function useAgent(): UseAgentReturn {
           recipeConfig: sessionMetadata.recipe,
         };
 
+        console.log(
+          'useAgent: Returning chat with',
+          chat.messages.length,
+          'messages for session:',
+          targetSessionId
+        );
         return chat;
       }
 
@@ -106,6 +133,11 @@ export function useAgent(): UseAgentReturn {
             throw new NoProviderOrModelError();
           }
 
+          console.log(
+            'useAgent: Initializing agent, resumeSessionId:',
+            initContext.resumeSessionId
+          );
+
           const agentResponse = initContext.resumeSessionId
             ? await resumeAgent({
                 body: {
@@ -125,6 +157,13 @@ export function useAgent(): UseAgentReturn {
           if (!agentSessionInfo) {
             throw Error('Failed to get session info');
           }
+          console.log(
+            'useAgent: Got session info for sessionId:',
+            agentSessionInfo.session_id,
+            'with',
+            agentSessionInfo.messages.length,
+            'messages'
+          );
           setSessionId(agentSessionInfo.session_id);
 
           agentWaitingMessage('Agent is loading config');
@@ -164,6 +203,12 @@ export function useAgent(): UseAgentReturn {
             recipeConfig: sessionMetadata.recipe,
           };
 
+          console.log(
+            'useAgent: Created initChat with',
+            initChat.messages.length,
+            'messages, title:',
+            initChat.title
+          );
           setAgentState(AgentState.INITIALIZED);
 
           return initChat;

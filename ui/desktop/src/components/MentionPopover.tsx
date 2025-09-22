@@ -454,7 +454,7 @@ const MentionPopover = forwardRef<
   return (
     <div
       ref={popoverRef}
-      className="fixed z-50 bg-background-default border border-borderStandard rounded-lg shadow-lg min-w-96 max-w-lg"
+      className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg min-w-96 max-w-lg backdrop-blur-sm"
       style={{
         left: position.x,
         top: position.y - 10, // Position above the chat input
@@ -464,8 +464,8 @@ const MentionPopover = forwardRef<
       <div className="p-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
-            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-textSubtle"></div>
-            <span className="ml-2 text-sm text-textSubtle">Scanning files...</span>
+            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-400"></div>
+            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Scanning files...</span>
           </div>
         ) : (
           <>
@@ -474,38 +474,48 @@ const MentionPopover = forwardRef<
                 <div
                   key={file.path}
                   onClick={() => handleItemClick(index)}
-                  className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
                     index === selectedIndex
-                      ? 'bg-bgProminent text-textProminentInverse'
-                      : 'hover:bg-bgSubtle'
+                      ? 'bg-blue-500 text-white'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
-                  <div className="flex-shrink-0 text-textSubtle">
+                  <div
+                    className={`flex-shrink-0 ${index === selectedIndex ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}
+                  >
                     <FileIcon fileName={file.name} isDirectory={file.isDirectory} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm truncate text-textStandard">{file.name}</div>
-                    <div className="text-xs text-textSubtle truncate">{file.path}</div>
+                    <div
+                      className={`text-sm truncate ${index === selectedIndex ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}
+                    >
+                      {file.name}
+                    </div>
+                    <div
+                      className={`text-xs truncate ${index === selectedIndex ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}
+                    >
+                      {file.path}
+                    </div>
                   </div>
                 </div>
               ))}
 
               {!isLoading && displayedFiles.length === 0 && query && (
-                <div className="p-4 text-center text-textSubtle text-sm">
+                <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                   No files found matching "{query}"
                 </div>
               )}
 
               {!isLoading && displayedFiles.length === 0 && !query && (
-                <div className="p-4 text-center text-textSubtle text-sm">
+                <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                   Start typing to search for files
                 </div>
               )}
             </div>
 
             {remainingCount > 0 && (
-              <div className="mt-2 pt-2 border-t border-borderSubtle">
-                <div className="text-xs text-textSubtle text-center">
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
                   Show {remainingCount} more...
                 </div>
               </div>

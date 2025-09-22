@@ -280,7 +280,94 @@
   font-style: normal;
 }
 
-/* animations */
+/* ===== Spring-ish Animation System ===== */
+:root {
+  --spring-duration: 180ms; /* SwiftUI mass/stiffness/damping ≈ 180ms after .speed(2.2) */
+  --spring-ease: cubic-bezier(0.2, 0.9, 0.24, 1);
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --spring-duration: 1ms;
+  }
+}
+
+/* Base animation helpers */
+.spring-enter {
+  animation: kf-enter var(--spring-duration) var(--spring-ease) both;
+}
+.spring-exit {
+  animation: kf-exit var(--spring-duration) var(--spring-ease) both;
+}
+
+/* Direction + magnitude knobs (you can override per element) */
+.from-left {
+  --tx: -100%;
+  --ty: 0;
+}
+.from-right {
+  --tx: 100%;
+  --ty: 0;
+}
+.from-top {
+  --tx: 0;
+  --ty: -100%;
+}
+.from-bottom {
+  --tx: 0;
+  --ty: 100%;
+}
+
+/* Scale presets to mirror your SwiftUI transitions */
+.scale-80 {
+  --scale: 0.8;
+}
+.scale-60 {
+  --scale: 0.6;
+}
+
+/* Optional blur for the inAndOutWithScaleAndBlur case */
+.with-blur {
+  --blur: 40px;
+}
+
+/* Sensible defaults if not set */
+:root {
+  --tx: 0;
+  --ty: 0;
+  --scale: 0.8; /* default to your 0.8; override with .scale-60 where needed */
+  --blur: 0px;
+}
+
+/* Keyframes that combine move + opacity + scale (+ blur) */
+@keyframes kf-enter {
+  from {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(var(--scale));
+    filter: blur(var(--blur));
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+@keyframes kf-exit {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+    filter: blur(0px);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(var(--scale));
+    filter: blur(var(--blur));
+  }
+}
+
+/* Legacy animations - gradually replace with spring system */
 @keyframes appear {
   from {
     opacity: 0;
@@ -290,6 +377,7 @@
   }
 }
 
+/* Legacy fade-slide-up - replace with spring-enter from-bottom */
 @keyframes fade-slide-up {
   from {
     opacity: 0;
@@ -324,14 +412,18 @@
   }
 }
 
-/* Non-blocking sidebar animations */
+/* Non-blocking sidebar animations - now using spring system */
 .sidebar-item {
-  /* Start hidden and positioned to the right */
-  opacity: 0;
-  transform: translateX(20px);
-  animation: sidebar-item-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  /* Use spring animation system */
+  --tx: 20px;
+  --ty: 0;
+  --scale: 1;
   /* Use will-change sparingly and remove after animation */
   will-change: transform, opacity;
+}
+
+.sidebar-item.spring-enter {
+  animation-duration: calc(var(--spring-duration) * 1.5); /* Slightly slower for staggered effect */
 }
 
 .sidebar-item:nth-child(1) {
@@ -402,8 +494,20 @@
   color: var(--text-prominent-inverse) !important;
 }
 
+/* Use spring system instead: spring-enter from-bottom */
 .animate-fade-slide-up {
   animation: fade-slide-up 0.15s ease-out forwards;
+}
+
+/* New spring-based animation classes */
+.animate-spring-fade-up {
+  --tx: 0;
+  --ty: 20px;
+  --scale: 1;
+}
+
+.animate-spring-fade-up.spring-enter {
+  animation-duration: 150ms; /* Faster for quick interactions */
 }
 
 /* Force scrollbars to be visible */
@@ -600,8 +704,8 @@ p > code.bg-inline-code {
   contain: layout style paint;
 }
 
-/* Goose icon animation to replace framer-motion */
-@keyframes goose-icon-entrance {
+/* Goose icon animation using spring system with custom keyframes for rotation */
+@keyframes goose-spring-entrance {
   from {
     opacity: 0;
     transform: scale(0.25) translate(-5px, 5px) rotate(-20deg);
@@ -613,7 +717,16 @@ p > code.bg-inline-code {
 }
 
 .goose-icon-animation {
-  animation: goose-icon-entrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: goose-spring-entrance var(--spring-duration) var(--spring-ease) forwards;
+  animation-duration: 400ms; /* Slightly longer for dramatic effect */
+  transform-origin: bottom left;
+}
+
+/* Spring-based goose entrance variant */
+.goose-spring-enter {
+  --tx: -5px;
+  --ty: 5px;
+  --scale: 0.25;
   transform-origin: bottom left;
 }
 
@@ -688,7 +801,7 @@ p > code.bg-inline-code {
   contain: layout style paint;
 }
 
-/* Non-blocking page transitions */
+/* Non-blocking page transitions - using spring system */
 @keyframes page-fade-in {
   from {
     opacity: 0;
@@ -704,6 +817,31 @@ p > code.bg-inline-code {
   animation: page-fade-in 0.08s ease-out forwards;
   /* Don't block interactions during animation */
   pointer-events: auto;
+}
+
+/* Spring-based page transition */
+.page-spring-enter {
+  --tx: 0;
+  --ty: 0;
+  --scale: 0.98;
+  animation-duration: 120ms; /* Very fast for page transitions */
+  pointer-events: auto;
+}
+
+/* Spring-based transition helpers for common hover/focus states */
+.transition-spring {
+  transition: all var(--spring-duration) var(--spring-ease);
+}
+
+.transition-spring-fast {
+  transition: all calc(var(--spring-duration) * 0.8) var(--spring-ease);
+}
+
+.transition-spring-colors {
+  transition:
+    color var(--spring-duration) var(--spring-ease),
+    background-color var(--spring-duration) var(--spring-ease),
+    border-color var(--spring-duration) var(--spring-ease);
 }
 
 /* Sidebar transition optimizations */

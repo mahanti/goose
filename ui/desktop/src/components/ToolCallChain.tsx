@@ -1,7 +1,7 @@
 import { formatMessageTimestamp } from '../utils/timeUtils';
 import { Message, getToolRequests } from '../types/message';
 import { NotificationEvent } from '../hooks/useMessageStream';
-import ToolCallWithResponse from './ToolCallWithResponse';
+import GooseToolDisplay from './GooseToolDisplay';
 
 interface ToolCallChainProps {
   messages: Message[];
@@ -33,7 +33,7 @@ export default function ToolCallChain({
 
           return toolRequests.map((toolRequest) => (
             <div key={toolRequest.id} className="goose-message-tool">
-              <ToolCallWithResponse
+              <GooseToolDisplay
                 isCancelledMessage={
                   messageIndex < messageHistoryIndex &&
                   toolResponsesMap.get(toolRequest.id) == undefined

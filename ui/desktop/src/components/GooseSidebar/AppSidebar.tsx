@@ -1,20 +1,21 @@
 import React, { useEffect } from 'react';
-import { FileText, Clock, Home, Puzzle, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupContent,
   SidebarSeparator,
 } from '../ui/sidebar';
-import { ChatSmart, Gear } from '../icons';
 import { ViewOptions, View } from '../../utils/navigationUtils';
 import { useChatContext } from '../../contexts/ChatContext';
 import { DEFAULT_CHAT_TITLE } from '../../contexts/ChatContext';
+import { SessionsSection } from './SessionsSection';
+import Settings from '../icons/Settings';
+import { Button } from '../ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/Tooltip';
 
 interface SidebarProps {
   onSelectSession: (sessionId: string) => void;
@@ -29,7 +30,6 @@ interface NavigationItem {
   type: 'item';
   path: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
   tooltip: string;
 }
 
@@ -43,60 +43,20 @@ const menuItems: NavigationEntry[] = [
   {
     type: 'item',
     path: '/',
-    label: 'Home',
-    icon: Home,
-    tooltip: 'Go back to the main chat screen',
-  },
-  { type: 'separator' },
-  {
-    type: 'item',
-    path: '/pair',
-    label: 'Chat',
-    icon: ChatSmart,
+    label: 'New chat',
     tooltip: 'Start pairing with Goose',
-  },
-  {
-    type: 'item',
-    path: '/sessions',
-    label: 'History',
-    icon: History,
-    tooltip: 'View your session history',
-  },
-  { type: 'separator' },
-  {
-    type: 'item',
-    path: '/recipes',
-    label: 'Recipes',
-    icon: FileText,
-    tooltip: 'Browse your saved recipes',
-  },
-  {
-    type: 'item',
-    path: '/schedules',
-    label: 'Scheduler',
-    icon: Clock,
-    tooltip: 'Manage scheduled runs',
-  },
-  {
-    type: 'item',
-    path: '/extensions',
-    label: 'Extensions',
-    icon: Puzzle,
-    tooltip: 'Manage your extensions',
-  },
-  { type: 'separator' },
-  {
-    type: 'item',
-    path: '/settings',
-    label: 'Settings',
-    icon: Gear,
-    tooltip: 'Configure Goose settings',
   },
 ];
 
-const AppSidebar: React.FC<SidebarProps> = ({ currentPath }) => {
+const AppSidebar: React.FC<SidebarProps> = ({ currentPath, onSelectSession, refreshTrigger }) => {
   const navigate = useNavigate();
   const chatContext = useChatContext();
+
+  const handleSelectSession = (sessionId: string) => {
+    if (onSelectSession) {
+      onSelectSession(sessionId);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -135,37 +95,53 @@ const AppSidebar: React.FC<SidebarProps> = ({ currentPath }) => {
       return <SidebarSeparator key={index} />;
     }
 
-    const IconComponent = entry.icon;
-
     return (
-      <SidebarGroup key={entry.path}>
-        <SidebarGroupContent className="space-y-1">
-          <div className="sidebar-item">
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                data-testid={`sidebar-${entry.label.toLowerCase()}-button`}
-                onClick={() => navigate(entry.path)}
-                isActive={isActivePath(entry.path)}
-                tooltip={entry.tooltip}
-                className="w-full justify-start px-3 rounded-lg h-fit hover:bg-background-medium/50 transition-all duration-200 data-[active=true]:bg-background-medium"
-              >
-                <IconComponent className="w-4 h-4" />
-                <span>{entry.label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </div>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      <SidebarMenuItem key={entry.path}>
+        <SidebarMenuButton
+          data-testid={`sidebar-${entry.label.toLowerCase()}-button`}
+          onClick={() => navigate(entry.path)}
+          isActive={isActivePath(entry.path)}
+          tooltip={entry.tooltip}
+          className="w-full justify-start text-sm font-medium rounded-md h-auto hover:bg-gray-100 dark:hover:bg-gray-700 transition-spring-colors data-[active=true]:bg-gray-200 dark:data-[active=true]:bg-gray-600"
+        >
+          <span>{entry.label}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
     );
   };
 
   return (
     <>
-      <SidebarContent className="pt-16">
-        <SidebarMenu>{menuItems.map((entry, index) => renderMenuItem(entry, index))}</SidebarMenu>
+      <SidebarHeader className="pt-4 bg-gray-50 dark:bg-gray-800 flex-row justify-end">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/settings')}
+                className="h-8 w-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-spring-colors"
+              >
+                <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Settings</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </SidebarHeader>
+
+      <SidebarContent className="pt-4 bg-gray-50 dark:bg-gray-800">
+        <div className="px-2">
+          <SidebarMenu className="space-y-1">
+            {menuItems.map((entry, index) => renderMenuItem(entry, index))}
+          </SidebarMenu>
+        </div>
+        <SessionsSection onSelectSession={handleSelectSession} refreshTrigger={refreshTrigger} />
       </SidebarContent>
 
-      <SidebarFooter />
+      <SidebarFooter className="bg-gray-50 dark:bg-gray-800" />
     </>
   );
 };

@@ -63,9 +63,11 @@ export function Pill({
         'text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200',
     },
     slate: {
-      gradient: 'from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white',
-      glow: 'bg-slate-500 hover:bg-slate-600 text-white shadow-slate-500/25 hover:shadow-slate-500/40',
-      glass: 'text-slate-700 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-200',
+      gradient:
+        'from-neutral-500 to-neutral-600 hover:from-neutral-600 hover:to-neutral-700 text-white',
+      glow: 'bg-neutral-500 hover:bg-neutral-600 text-white shadow-neutral-500/25 hover:shadow-neutral-500/40',
+      glass:
+        'text-neutral-700 dark:text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-200',
     },
   };
 

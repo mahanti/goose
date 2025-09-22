@@ -8,7 +8,6 @@ import {
 } from '@mcp-ui/client';
 import { useState, useEffect } from 'react';
 import { ResourceContent } from '../types/message';
-import { toast } from 'react-toastify';
 
 interface MCPUIResourceRendererProps {
   content: ResourceContent;
@@ -89,7 +88,8 @@ enum UIActionErrorCode {
   TIMEOUT = 'TIMEOUT',
 }
 
-// toast component
+/*
+// toast component (currently unused - commented out to avoid TypeScript errors)
 const ToastComponent = ({
   messageType,
   message,
@@ -119,6 +119,7 @@ const ToastComponent = ({
     </div>
   );
 };
+*/
 
 export default function MCPUIResourceRenderer({
   content,
@@ -142,9 +143,9 @@ export default function MCPUIResourceRenderer({
       actionEvent: UIActionResultToolCall
     ): Promise<UIActionHandlerResult> => {
       const { toolName, params } = actionEvent.payload;
-      toast.info(<ToastComponent messageType="tool" message={toolName} isImplemented={false} />, {
-        theme: currentThemeValue,
-      });
+      // toast.info(<ToastComponent messageType="tool" message={toolName} isImplemented={false} />, {
+      //   theme: currentThemeValue,
+      // });
       return {
         status: 'error' as const,
         error: {
@@ -246,11 +247,11 @@ export default function MCPUIResourceRenderer({
     const handleNotifyCase = async (
       actionEvent: UIActionResultNotification
     ): Promise<UIActionHandlerResult> => {
-      const { message } = actionEvent.payload;
+      // const { message } = actionEvent.payload; // Commented out as not used without toast
 
-      toast.info(<ToastComponent messageType="notify" message={message} isImplemented={true} />, {
-        theme: currentThemeValue,
-      });
+      // toast.info(<ToastComponent messageType="notify" message={message} isImplemented={true} />, {
+      //   theme: currentThemeValue,
+      // });
       return {
         status: 'success' as const,
         data: {
@@ -264,16 +265,16 @@ export default function MCPUIResourceRenderer({
     const handleIntentCase = async (
       actionEvent: UIActionResultIntent
     ): Promise<UIActionHandlerResult> => {
-      toast.info(
-        <ToastComponent
-          messageType="intent"
-          message={actionEvent.payload.intent}
-          isImplemented={false}
-        />,
-        {
-          theme: currentThemeValue,
-        }
-      );
+      // toast.info(
+      //   <ToastComponent
+      //     messageType="intent"
+      //     message={actionEvent.payload.intent}
+      //     isImplemented={false}
+      //   />,
+      //   {
+      //     theme: currentThemeValue,
+      //   }
+      // );
       return {
         status: 'error' as const,
         error: {

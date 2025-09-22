@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useModelAndProvider } from '../ModelAndProviderContext';
 import { useConfig } from '../ConfigContext';
 import { CoinIcon } from '../icons';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/Tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import {
   getCostForModel,
   initializeCostDatabase,
@@ -25,6 +25,8 @@ interface CostTrackerProps {
 export function CostTracker({ inputTokens = 0, outputTokens = 0, sessionCosts }: CostTrackerProps) {
   const { currentModel, currentProvider } = useModelAndProvider();
   const { getProviders } = useConfig();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownId = useRef('cost-tracker-dropdown');
   const [costInfo, setCostInfo] = useState<{
     input_token_cost?: number;
     output_token_cost?: number;
@@ -128,6 +130,23 @@ export function CostTracker({ inputTokens = 0, outputTokens = 0, sessionCosts }:
     loadCostInfo();
   }, [currentModel, currentProvider]);
 
+  // Listen for global dropdown close events
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleCloseAllDropdowns = (event: any) => {
+      // Don't close this dropdown if it was the one that sent the event
+      if (event.detail?.senderId !== dropdownId.current && isDropdownOpen) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    window.addEventListener('close-all-dropdowns', handleCloseAllDropdowns);
+
+    return () => {
+      window.removeEventListener('close-all-dropdowns', handleCloseAllDropdowns);
+    };
+  }, [isDropdownOpen]);
+
   // Return null early if pricing is disabled
   if (!showPricing) {
     return null;
@@ -184,12 +203,9 @@ export function CostTracker({ inputTokens = 0, outputTokens = 0, sessionCosts }:
   // If still loading, show a placeholder
   if (isLoading) {
     return (
-      <>
-        <div className="flex items-center justify-center h-full text-textSubtle translate-y-[1px]">
-          <span className="text-xs font-mono">...</span>
-        </div>
-        <div className="w-px h-4 bg-border-default mx-2" />
-      </>
+      <div className="flex items-center justify-center h-full text-textSubtle translate-y-[1px]">
+        <span className="text-xs font-mono">...</span>
+      </div>
     );
   }
 
@@ -202,20 +218,48 @@ export function CostTracker({ inputTokens = 0, outputTokens = 0, sessionCosts }:
     const freeProviders = ['ollama', 'local', 'localhost'];
     if (freeProviders.includes(currentProvider.toLowerCase())) {
       return (
-        <>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center justify-center h-full text-text-default/70 hover:text-text-default transition-colors cursor-default translate-y-[1px]">
-                <CoinIcon className="mr-1" size={16} />
-                <span className="text-xs font-mono">0.0000</span>
+        <DropdownMenu
+          open={isDropdownOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              // Close all other dropdowns when this one opens
+              window.dispatchEvent(
+                new CustomEvent('close-all-dropdowns', {
+                  detail: { senderId: dropdownId.current },
+                })
+              );
+            }
+            setIsDropdownOpen(open);
+          }}
+        >
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center justify-center transition-colors cursor-pointer text-text-default/70 hover:text-text-default rounded-full border border-border-default hover:bg-background-muted px-2 py-1 h-7">
+              <CoinIcon className="mr-1" size={14} />
+              <span className="text-xs font-mono">0.0000</span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="top"
+            align="center"
+            className="w-64 p-6 rounded-2xl bg-background-default shadow-lg border border-border-default"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+            sideOffset={4}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CoinIcon size={16} className="text-text-muted" />
+                <span className="font-medium text-sm">Cost Tracking</span>
               </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {`Local model (${inputTokens.toLocaleString()} input, ${outputTokens.toLocaleString()} output tokens)`}
-            </TooltipContent>
-          </Tooltip>
-          <div className="w-px h-4 bg-border-default mx-2" />
-        </>
+              <div className="text-sm text-text-muted">
+                <div>Local model - no cost incurred</div>
+                <div className="mt-2 text-xs">
+                  <div>Input tokens: {inputTokens.toLocaleString()}</div>
+                  <div>Output tokens: {outputTokens.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       );
     }
 
@@ -229,74 +273,224 @@ export function CostTracker({ inputTokens = 0, outputTokens = 0, sessionCosts }:
     };
 
     return (
-      <>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center justify-center h-full transition-colors cursor-default translate-y-[1px] text-text-default/70 hover:text-text-default">
-              <CoinIcon className="mr-1" size={16} />
-              <span className="text-xs font-mono">0.0000</span>
+      <DropdownMenu
+        open={isDropdownOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            // Close all other dropdowns when this one opens
+            window.dispatchEvent(
+              new CustomEvent('close-all-dropdowns', {
+                detail: { senderId: dropdownId.current },
+              })
+            );
+          }
+          setIsDropdownOpen(open);
+        }}
+      >
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center justify-center transition-colors cursor-pointer text-text-default/70 hover:text-text-default rounded-full border border-border-default hover:bg-background-muted px-2 py-1 h-7">
+            <CoinIcon className="mr-1" size={14} />
+            <span className="text-xs font-mono">0.0000</span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          side="top"
+          align="center"
+          className="w-72 p-6 rounded-2xl bg-background-default shadow-lg border border-border-default"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          sideOffset={4}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <CoinIcon size={16} className="text-text-muted" />
+              <span className="font-medium text-sm">Cost Information</span>
             </div>
-          </TooltipTrigger>
-          <TooltipContent>{getUnavailableTooltip()}</TooltipContent>
-        </Tooltip>
-        <div className="w-px h-4 bg-border-default mx-2" />
-      </>
+            <div className="text-sm text-text-muted">{getUnavailableTooltip()}</div>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 
   const totalCost = calculateCost();
 
-  // Build tooltip content
-  const getTooltipContent = (): string => {
+  // Don't render if no cost data is available or if there's any issue with pricing
+  if (
+    !costInfo?.input_token_cost ||
+    !costInfo?.output_token_cost ||
+    totalCost === 0 ||
+    isLoading ||
+    pricingFailed ||
+    modelNotFound ||
+    !showPricing
+  ) {
+    return null;
+  }
+
+  const getDropdownContent = () => {
     // Handle error states first
     if (pricingFailed && hasAttemptedFetch && initialLoadComplete) {
-      return `Pricing data unavailable - OpenRouter connection failed. Click refresh in settings to retry.`;
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <CoinIcon size={16} className="text-text-muted" />
+            <span className="font-medium text-sm">Cost Information</span>
+          </div>
+          <div className="text-sm text-text-muted">
+            <div className="text-orange-400 mb-2">⚠️ Pricing Data Unavailable</div>
+            <div>OpenRouter connection failed. Click refresh in settings to retry.</div>
+          </div>
+        </div>
+      );
     }
 
     if (modelNotFound && hasAttemptedFetch && initialLoadComplete) {
-      return `Pricing not available for ${currentProvider}/${currentModel}. This model may not be supported by the pricing service.`;
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <CoinIcon size={16} className="text-text-muted" />
+            <span className="font-medium text-sm">Cost Information</span>
+          </div>
+          <div className="text-sm text-text-muted">
+            <div className="text-orange-400 mb-2">⚠️ Model Not Found</div>
+            <div>
+              Pricing not available for {currentProvider}/{currentModel}. This model may not be
+              supported by the pricing service.
+            </div>
+          </div>
+        </div>
+      );
     }
 
     // Handle session costs
     if (sessionCosts && Object.keys(sessionCosts).length > 0) {
-      // Show session breakdown
-      let tooltip = 'Session cost breakdown:\n';
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <CoinIcon size={16} className="text-text-muted" />
+            <span className="font-medium text-sm">Session Cost Breakdown</span>
+          </div>
 
-      Object.entries(sessionCosts).forEach(([modelKey, cost]) => {
-        const costStr = `${costInfo?.currency || '$'}${cost.totalCost.toFixed(6)}`;
-        tooltip += `${modelKey}: ${costStr} (${cost.inputTokens.toLocaleString()} in, ${cost.outputTokens.toLocaleString()} out)\n`;
-      });
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {Object.entries(sessionCosts).map(([modelKey, cost]) => (
+              <div key={modelKey} className="bg-background-muted rounded-lg p-3">
+                <div className="font-medium text-xs">{modelKey}</div>
+                <div className="text-xs text-text-muted mt-1">
+                  <div>
+                    Cost: {costInfo?.currency || '$'}
+                    {cost.totalCost.toFixed(6)}
+                  </div>
+                  <div>Input: {cost.inputTokens.toLocaleString()} tokens</div>
+                  <div>Output: {cost.outputTokens.toLocaleString()} tokens</div>
+                </div>
+              </div>
+            ))}
 
-      // Add current model if it has costs
-      if (costInfo && (inputTokens > 0 || outputTokens > 0)) {
-        const currentCost =
-          inputTokens * (costInfo.input_token_cost || 0) +
-          outputTokens * (costInfo.output_token_cost || 0);
-        if (currentCost > 0) {
-          tooltip += `${currentProvider}/${currentModel} (current): ${costInfo.currency || '$'}${currentCost.toFixed(6)} (${inputTokens.toLocaleString()} in, ${outputTokens.toLocaleString()} out)\n`;
-        }
-      }
+            {costInfo && (inputTokens > 0 || outputTokens > 0) && (
+              <div className="bg-background-accent/10 rounded-lg p-3 border border-background-accent/20">
+                <div className="font-medium text-xs">
+                  {currentProvider}/{currentModel} (current)
+                </div>
+                <div className="text-xs text-text-muted mt-1">
+                  <div>
+                    Cost: {costInfo.currency || '$'}
+                    {(
+                      inputTokens * (costInfo.input_token_cost || 0) +
+                      outputTokens * (costInfo.output_token_cost || 0)
+                    ).toFixed(6)}
+                  </div>
+                  <div>Input: {inputTokens.toLocaleString()} tokens</div>
+                  <div>Output: {outputTokens.toLocaleString()} tokens</div>
+                </div>
+              </div>
+            )}
+          </div>
 
-      tooltip += `\nTotal session cost: ${costInfo?.currency || '$'}${totalCost.toFixed(6)}`;
-      return tooltip;
+          <div className="border-t border-border-default pt-3">
+            <div className="font-medium text-sm">
+              Total Session Cost: {costInfo?.currency || '$'}
+              {totalCost.toFixed(6)}
+            </div>
+          </div>
+        </div>
+      );
     }
 
-    // Default tooltip for single model
-    return `Input: ${inputTokens.toLocaleString()} tokens (${costInfo?.currency || '$'}${(inputTokens * (costInfo?.input_token_cost || 0)).toFixed(6)}) | Output: ${outputTokens.toLocaleString()} tokens (${costInfo?.currency || '$'}${(outputTokens * (costInfo?.output_token_cost || 0)).toFixed(6)})`;
+    // Default single model breakdown
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <CoinIcon size={16} className="text-text-muted" />
+          <span className="font-medium text-sm">Cost Breakdown</span>
+        </div>
+
+        <div className="space-y-3">
+          <div className="bg-background-muted rounded-lg p-3">
+            <div className="text-xs text-text-muted">
+              <div className="font-medium text-text-default mb-2">
+                {currentProvider}/{currentModel}
+              </div>
+              <div>Input: {inputTokens.toLocaleString()} tokens</div>
+              <div>
+                Cost: {costInfo?.currency || '$'}
+                {(inputTokens * (costInfo?.input_token_cost || 0)).toFixed(6)}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-background-muted rounded-lg p-3">
+            <div className="text-xs text-text-muted">
+              <div className="font-medium text-text-default mb-2">Output</div>
+              <div>Output: {outputTokens.toLocaleString()} tokens</div>
+              <div>
+                Cost: {costInfo?.currency || '$'}
+                {(outputTokens * (costInfo?.output_token_cost || 0)).toFixed(6)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-border-default pt-3">
+          <div className="font-medium text-sm">
+            Total Cost: {costInfo?.currency || '$'}
+            {totalCost.toFixed(6)}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center justify-center h-full transition-colors cursor-default translate-y-[1px] text-text-default/70 hover:text-text-default">
-            <CoinIcon className="mr-1" size={16} />
-            <span className="text-xs font-mono">{formatCost(totalCost)}</span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>{getTooltipContent()}</TooltipContent>
-      </Tooltip>
-      <div className="w-px h-4 bg-border-default mx-2" />
-    </>
+    <DropdownMenu
+      open={isDropdownOpen}
+      onOpenChange={(open) => {
+        if (open) {
+          // Close all other dropdowns when this one opens
+          window.dispatchEvent(
+            new CustomEvent('close-all-dropdowns', {
+              detail: { senderId: dropdownId.current },
+            })
+          );
+        }
+        setIsDropdownOpen(open);
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center justify-center transition-colors cursor-pointer text-text-default/70 hover:text-text-default rounded-full border border-border-default hover:bg-background-muted px-2 py-1 h-7">
+          <CoinIcon className="mr-1" size={14} />
+          <span className="text-xs font-mono">{formatCost(totalCost)}</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="top"
+        align="center"
+        className="w-80 max-h-96 p-6 rounded-2xl bg-background-default shadow-lg border border-border-default"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        sideOffset={4}
+        collisionPadding={10}
+      >
+        {getDropdownContent()}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
